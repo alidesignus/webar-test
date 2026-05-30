@@ -48,7 +48,7 @@
           // Tabela kameraya girdiğinde videoyu oynat
           marker.addEventListener('markerFound', function () {
             if (video) {
-              video.play();
+              video.play().catch(err => console.log("Oynatma yetki engeline takıldı:", err));
             }
           });
 
@@ -61,6 +61,22 @@
           });
         }
       });
+
+      // 3. MOBİL TARAYICI VİDEO OYNATMA KORUMASINI KIRAN FONKSİYON
+      // Kullanıcı ekrana ilk dokunduğu an tüm videoları tarayıcı hafızasında oynatılabilir duruma getirir
+      const KorumayiKir = function () {
+        const videolar = document.querySelectorAll('video');
+        videolar.forEach(v => {
+          v.play().then(() => {
+            v.pause();
+            v.currentTime = 0;
+          }).catch(err => console.log("Ön yükleme atlandı:", err));
+        });
+        window.removeEventListener('click', KorumayiKir);
+        window.removeEventListener('touchstart', KorumayiKir);
+      };
+      window.addEventListener('click', KorumayiKir);
+      window.addEventListener('touchstart', KorumayiKir);
     </script>
   </head>
 
@@ -89,72 +105,79 @@
       </a-assets>
 
       <a-marker type="pattern" url="markers/peronlar.patt" marker-handler data-video="#vid-peronlar">
-        <a-plane material="shader: chromakey; src: #vid-peronlar; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-peronlar; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker preset="hiro" marker-handler data-video="#vid-giseler">
-        <a-plane material="shader: chromakey; src: #vid-giseler; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-box position="0 0.5 0" material="color: red; opacity: 0.8;" scale="0.5 0.5 0.5"></a-box>
+        <a-plane material="shader: chromakey; src: #vid-giseler; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/bekleme-salonu.patt" marker-handler data-video="#vid-bekleme">
-        <a-plane material="shader: chromakey; src: #vid-bekleme; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-bekleme; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/market.patt" marker-handler data-video="#vid-market">
-        <a-plane material="shader: chromakey; src: #vid-market; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-market; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/restaurant.patt" marker-handler data-video="#vid-restaurant">
-        <a-plane material="shader: chromakey; src: #vid-restaurant; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-restaurant; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/mescit.patt" marker-handler data-video="#vid-mescit">
-        <a-plane material="shader: chromakey; src: #vid-mescit; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-mescit; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/bebek-bakim-odasi.patt" marker-handler data-video="#vid-bebek">
-        <a-plane material="shader: chromakey; src: #vid-bebek; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-bebek; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/kayip-esya-burosu.patt" marker-handler data-video="#vid-kayipesya">
-        <a-plane material="shader: chromakey; src: #vid-kayipesya; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-kayipesya; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/atm.patt" marker-handler data-video="#vid-atm">
-        <a-plane material="shader: chromakey; src: #vid-atm; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-atm; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/asansorler.patt" marker-handler data-video="#vid-asansorler">
-        <a-plane material="shader: chromakey; src: #vid-asansorler; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-asansorler; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/taksi.patt" marker-handler data-video="#vid-taksi">
-        <a-plane material="shader: chromakey; src: #vid-taksi; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-taksi; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/otobus.patt" marker-handler data-video="#vid-otobus">
-        <a-plane material="shader: chromakey; src: #vid-otobus; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-otobus; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/metro.patt" marker-handler data-video="#vid-metro">
-        <a-plane material="shader: chromakey; src: #vid-metro; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-metro; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/ust-kat.patt" marker-handler data-video="#vid-ustkat">
-        <a-plane material="shader: chromakey; src: #vid-ustkat; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-ustkat; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/alt-kat.patt" marker-handler data-video="#vid-altkat">
-        <a-plane material="shader: chromakey; src: #vid-altkat; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-altkat; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/yuruyen-merdivenler.patt" marker-handler data-video="#vid-yuruyen">
-        <a-plane material="shader: chromakey; src: #vid-yuruyen; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-yuruyen; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/sol.patt" marker-handler data-video="#vid-sol">
-        <a-plane material="shader: chromakey; src: #vid-sol; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+        <a-plane material="shader: chromakey; src: #vid-sol; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
       <a-marker type="pattern" url="markers/sag.patt" marker-handler data-video="#vid-sag">
-        <a-plane material="shader: chromakey; src: #vid-sag; color: 0 1 0" width="1.
+        <a-plane material="shader: chromakey; src: #vid-sag; color: #00ff00" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+      </a-marker>
+
+      <a-entity camera></a-entity>
+    </a-scene>
+  </body>
+</html>
