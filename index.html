@@ -2,40 +2,73 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>WebAR Yeşil Ekran Silme Testi</title>
+    <title>WebAR Canlı Yeşil Ekran Çözümü</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://ar-js-org.github.io/AR.js/aframe/build/aframe-ar.js"></script>
 
     <script>
-      // 1. SİHİRLİ YEŞİL EKRAN YOK ETME MOTORU (CHROMA KEY SHADER)
-      AFRAME.registerShader('chromakey', {
+      // 1. VİDEO DÖNGÜSÜNÜ KAÇIRMAYAN CANLI RENK SİLME BİLEŞENİ
+      AFRAME.registerComponent('chromakey-video', {
         schema: {
-          src: {type: 'map'},
-          color: {type: 'color', default: '#00ff00'},
-          threshold: {type: 'number', default: 0.3} // Yeşil temizleme hassasiyeti
+          src: {type: 'selector'}
         },
-        vertexShader: `
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `,
-        fragmentShader: `
-          varying vec2 vUv;
-          uniform sampler2D src;
-          uniform vec3 color;
-          uniform float threshold;
-          void main() {
-            vec4 textureColor = texture2D(src, vUv);
-            float diff = distance(textureColor.rgb, color);
-            if (diff < threshold) {
-              discard; // Yeşili tamamen yok et (şeffaf yap)
-            } else {
-              gl_FragColor = textureColor; // Gerçek pikselleri göster
+        init: function () {
+          const videoElement = this.data.src;
+          if (!videoElement) return;
+
+          // Videoyu WebGL dokusu olarak tanımlıyoruz
+          this.texture = new THREE.VideoTexture(videoElement);
+          this.texture.minFilter = THREE.LinearFilter;
+          this.texture.magFilter = THREE.LinearFilter;
+
+          // Doğrudan saf WebGL seviyesinde yeşili filtreleyen malzeme motoru
+          this.material = new THREE.ShaderMaterial({
+            uniforms: {
+              map: { value: this.texture }
+            },
+            vertexShader: `
+              varying vec2 vUv;
+              void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+              }
+            `,
+            fragmentShader: `
+              varying vec2 vUv;
+              uniform sampler2D map;
+              void main() {
+                vec4 texColor = texture2D(map, vUv);
+                
+                // Gönderdiğiniz #00ff00 saf yeşili nokta atışı yok eden formül
+                float greenDifference = texColor.g - max(texColor.r, texColor.b);
+                
+                if (greenDifference > 0.15) {
+                  discard; // Yeşili tamamen uçur ve arkasını (kamerayı) göster
+                } else {
+                  gl_FragColor = texColor; // Beyaz yazıları ve logoyu olduğu gibi koru
+                }
+              }
+            `,
+            transparent: true,
+            side: THREE.DoubleSide
+          });
+
+          this.materialApplied = false;
+        },
+        tick: function () {
+          // A-Frame düzlemi yüklendiği an hazırladığımız malzemeyi üzerine giydirir
+          if (!this.materialApplied) {
+            const mesh = this.el.getObject3D('mesh');
+            if (mesh) {
+              mesh.material = this.material;
+              this.materialApplied = true;
             }
           }
-        `
+          // YEŞİL KALMA SORUNUNU ÇÖZEN EN KRİTİK AYAR: Her karede video dokusunu ekran kartına zorla push eder
+          if (this.texture) {
+            this.texture.needsUpdate = true;
+          }
+        }
       });
 
       // 2. SADECE GÖRSEL BULUNDUĞUNDA VİDEOYU BAŞLATAN EN SADE BİLEŞEN
@@ -53,7 +86,7 @@
           marker.addEventListener('markerLost', function () {
             if (video) {
               video.pause();
-              video.currentTime = 0; // Tabela kaybolunca videoyu sıfırla
+              video.currentTime = 0;
             }
           });
         }
@@ -71,7 +104,7 @@
 
       <a-marker preset="hiro" video-handler>
         
-        <a-plane material="shader: chromakey; src: #vid-giseler; color: #00ff00" width="1.2" height="1.2" rotation="-90 0 0"></a-plane>
+        <a-plane chromakey-video="src: #vid-giseler" width="1.2" height="1.2" rotation="-90 0 0"></a-plane>
 
       </a-marker>
 
