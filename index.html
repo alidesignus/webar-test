@@ -1,26 +1,132 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <!-- 3D kütüphanesi (A-Frame) -->
+    <meta charset="utf-8">
+    <title>WebAR Tez Projesi - Yönlendirme Sistemleri</title>
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-    <!-- AR kütüphanesi (AR.js) -->
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+    <script>
+      // 1. SİHİRLİ YEŞİL EKRAN YOK ETME MOTORU (CHROMA KEY SHADER)
+      AFRAME.registerShader('chromakey', {
+        schema: {
+          src: {type: 'map'},
+          color: {type: 'color', default: '#00ff00'},
+          threshold: {type: 'number', default: 0.3} // Yeşil temizleme hassasiyeti
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec2 vUv;
+          uniform sampler2D src;
+          uniform vec3 color;
+          uniform float threshold;
+          void main() {
+            vec4 textureColor = texture2D(src, vUv);
+            float diff = distance(textureColor.rgb, color);
+            if (diff < threshold) {
+              discard; // Yeşili tamamen yok et (şeffaf yap)
+            } else {
+              gl_FragColor = textureColor; // Gerçek pikselleri göster
+            }
+          }
+        `
+      });
+
+      // 2. AKILLI VİDEO OYNATICI VE DURDURUCU SİSTEMİ
+      AFRAME.registerComponent('marker-handler', {
+        init: function () {
+          const marker = this.el;
+          const videoId = marker.getAttribute('data-video');
+          const video = document.querySelector(videoId);
+
+          // Tabela kameraya girdiğinde videoyu oynat
+          marker.addEventListener('markerFound', function () {
+            if (video) {
+              video.play();
+            }
+          });
+
+          // Tabela kameradan çıktığında videoyu durdur ve başa sar
+          marker.addEventListener('markerLost', function () {
+            if (video) {
+              video.pause();
+              video.currentTime = 0;
+            }
+          });
+        }
+      });
+    </script>
   </head>
+
   <body style="margin: 0px; overflow: hidden;">
-    <!-- AR Sahnesi -->
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; sourceWidth:1280; sourceHeight:720; displayWidth:1280; displayHeight:720; videoTexture: true;">
       
-      <!-- Sistem bu 'hiro' görselini gördüğü an tetiklenecek -->
-      <a-marker preset="hiro">
-        <!-- Tabelanın üzerine binecek 3D Animasyonlu Kutu -->
-        <a-box position="0 0.5 0" 
-               material="color: #ff0000; opacity: 0.9;" 
-               animation="property: rotation; to: 0 360 0; loop: true; dur: 3000">
-        </a-box>
+      <a-assets>
+        <video id="vid-peronlar" src="videos/peronlar.mp4" loop="true" muted playsinline></video>
+        <video id="vid-giseler" src="videos/giseler.mp4" loop="true" muted playsinline></video>
+        <video id="vid-bekleme" src="videos/bekleme-salonu.mp4" loop="true" muted playsinline></video>
+        <video id="vid-market" src="videos/market.mp4" loop="true" muted playsinline></video>
+        <video id="vid-restaurant" src="videos/restaurant.mp4" loop="true" muted playsinline></video>
+        <video id="vid-mescit" src="videos/mescit.mp4" loop="true" muted playsinline></video>
+        <video id="vid-bebek" src="videos/bebek-bakim-odasi.mp4" loop="true" muted playsinline></video>
+        <video id="vid-kayipesya" src="videos/kayip-esya-burosu.mp4" loop="true" muted playsinline></video>
+        <video id="vid-atm" src="videos/atm.mp4" loop="true" muted playsinline></video>
+        <video id="vid-asansorler" src="videos/asansorler.mp4" loop="true" muted playsinline></video>
+        <video id="vid-taksi" src="videos/taksi.mp4" loop="true" muted playsinline></video>
+        <video id="vid-otobus" src="videos/otobus.mp4" loop="true" muted playsinline></video>
+        <video id="vid-metro" src="videos/metro.mp4" loop="true" muted playsinline></video>
+        <video id="vid-ustkat" src="videos/ust-kat.mp4" loop="true" muted playsinline></video>
+        <video id="vid-altkat" src="videos/alt-kat.mp4" loop="true" muted playsinline></video>
+        <video id="vid-yuruyen" src="videos/yuruyen-merdivenler.mp4" loop="true" muted playsinline></video>
+        <video id="vid-sol" src="videos/sol.mp4" loop="true" muted playsinline></video>
+        <video id="vid-sag" src="videos/sag.mp4" loop="true" muted playsinline></video>
+      </a-assets>
+
+      <a-marker type="pattern" url="markers/peronlar.patt" marker-handler data-video="#vid-peronlar">
+        <a-plane material="shader: chromakey; src: #vid-peronlar; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
       </a-marker>
 
-      <!-- Kamerayı tanımlıyoruz -->
-      <a-entity camera></a-entity>
-    </a-scene>
-  </body>
-</html>
+      <a-marker type="pattern" url="markers/giseler.patt" marker-handler data-video="#vid-giseler">
+        <a-plane material="shader: chromakey; src: #vid-giseler; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+      </a-marker>
+
+      <a-marker type="pattern" url="markers/bekleme-salonu.patt" marker-handler data-video="#vid-bekleme">
+        <a-plane material="shader: chromakey; src: #vid-bekleme; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+      </a-marker>
+
+      <a-marker type="pattern" url="markers/market.patt" marker-handler data-video="#vid-market">
+        <a-plane material="shader: chromakey; src: #vid-market; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+      </a-marker>
+
+      <a-marker type="pattern" url="markers/restaurant.patt" marker-handler data-video="#vid-restaurant">
+        <a-plane material="shader: chromakey; src: #vid-restaurant; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+      </a-marker>
+
+      <a-marker type="pattern" url="markers/mescit.patt" marker-handler data-video="#vid-mescit">
+        <a-plane material="shader: chromakey; src: #vid-mescit; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+      </a-marker>
+
+      <a-marker type="pattern" url="markers/bebek-bakim-odasi.patt" marker-handler data-video="#vid-bebek">
+        <a-plane material="shader: chromakey; src: #vid-bebek; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+      </a-marker>
+
+      <a-marker type="pattern" url="markers/kayip-esya-burosu.patt" marker-handler data-video="#vid-kayipesya">
+        <a-plane material="shader: chromakey; src: #vid-kayipesya; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+      </a-marker>
+
+      <a-marker type="pattern" url="markers/atm.patt" marker-handler data-video="#vid-atm">
+        <a-plane material="shader: chromakey; src: #vid-atm; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+      </a-marker>
+
+      <a-marker type="pattern" url="markers/asansorler.patt" marker-handler data-video="#vid-asansorler">
+        <a-plane material="shader: chromakey; src: #vid-asansorler; color: 0 1 0" width="1.6" height="0.9" rotation="-90 0 0"></a-plane>
+      </a-marker>
+
+      <a-marker type="pattern" url="markers/taksi.patt" marker-handler data-video="#vid-taksi">
+        <a-plane material="shader: chromakey; src: #vid-taksi; color: 0 1 0
