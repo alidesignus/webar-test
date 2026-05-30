@@ -2,9 +2,33 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>WebAR Hiro Görsel Testi</title>
+    <title>WebAR Hiro Video Testi</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://ar-js-org.github.io/AR.js/aframe/build/aframe-ar.js"></script>
+
+    <script>
+      // SADECE GÖRSEL BULUNDUĞUNDA VİDEOYU BAŞLATAN EN SADE BİLEŞEN
+      AFRAME.registerComponent('video-handler', {
+        init: function () {
+          const marker = this.el;
+          const video = document.querySelector('#vid-giseler');
+
+          // Hiro algılandığı an videoyu oynat
+          marker.addEventListener('markerFound', function () {
+            if (video) {
+              video.play().catch(err => console.log("Video oynatılamadı:", err));
+            }
+          });
+
+          // Hiro kaybedildiğinde videoyu durdur
+          marker.addEventListener('markerLost', function () {
+            if (video) {
+              video.pause();
+            }
+          });
+        }
+      });
+    </script>
   </head>
 
   <body style="margin: 0px; overflow: hidden;">
@@ -12,12 +36,12 @@
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720;">
       
       <a-assets>
-        <img id="img-plane" src="videos/plane.jpg" crossorigin="anonymous">
+        <video id="vid-giseler" src="videos/giseler.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
       </a-assets>
 
-      <a-marker preset="hiro">
+      <a-marker preset="hiro" video-handler>
         
-        <a-image src="#img-plane" width="1.2" height="1.2" rotation="-90 0 0"></a-image>
+        <a-video src="#vid-giseler" width="1.2" height="1.2" rotation="-90 0 0"></a-video>
 
       </a-marker>
 
