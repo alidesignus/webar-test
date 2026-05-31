@@ -2,86 +2,106 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>WebAR Özel Marker Test Sürümü</title>
+    <title>WebAR - 2D Ekran Ortası HUD Sistemi</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://ar-js-org.github.io/AR.js/aframe/build/aframe-ar.js"></script>
 
+    <style>
+      /* EKRAna 2B ORTALAMA VE 1080PX SINIRLAMA TASARIMI */
+      #screen-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: none; /* İlk başta gizli, tabela okununca açılacak */
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        background: rgba(0, 0, 0, 0.1); /* Hafif arka plan karartısı */
+        pointer-events: auto; /* Tıklamaları yakalayabilmesi için */
+      }
+
+      #chroma-canvas {
+        width: 90%;          /* Mobil ekranlarda sağdan soldan hafif boşluk */
+        max-width: 1080px;   /* İstenen maksimum 1080px genişlik sınırı */
+        height: auto;
+        cursor: pointer;
+      }
+    </style>
+
     <script>
-      // 1. VİDEO DÖNGÜSÜNÜ KAÇIRMAYAN CANLI RENK SİLME BİLEŞENİ
-      AFRAME.registerComponent('chromakey-video', {
-        schema: {
-          src: {type: 'selector'}
-        },
-        init: function () {
-          const videoElement = this.data.src;
-          if (!videoElement) return;
+      let activeVideo = null;
+      let canvas, ctx, animationLoop;
 
-          this.texture = new THREE.VideoTexture(videoElement);
-          this.texture.minFilter = THREE.LinearFilter;
-          this.texture.magFilter = THREE.LinearFilter;
+      window.addEventListener('DOMContentLoaded', () => {
+        canvas = document.querySelector('#chroma-canvas');
+        ctx = canvas.getContext('2d');
 
-          this.material = new THREE.ShaderMaterial({
-            uniforms: {
-              map: { value: this.texture }
-            },
-            vertexShader: `
-              varying vec2 vUv;
-              void main() {
-                vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-              }
-            `,
-            fragmentShader: `
-              varying vec2 vUv;
-              uniform sampler2D map;
-              void main() {
-                vec4 texColor = texture2D(map, vUv);
-                float greenDifference = texColor.g - max(texColor.r, texColor.b);
-                
-                if (greenDifference > 0.15) {
-                  discard; // Yeşili tamamen siler
-                } else {
-                  gl_FragColor = texColor; // Logoyu korur
-                }
-              }
-            `,
-            transparent: true,
-            side: THREE.DoubleSide
-          });
-
-          this.materialApplied = false;
-        },
-        tick: function () {
-          if (!this.materialApplied) {
-            const mesh = this.el.getObject3D('mesh');
-            if (mesh) {
-              mesh.material = this.material;
-              this.materialApplied = true;
-            }
+        // EKRANDAKİ VİDEOYA/ALANA TIKLANDIĞINDA KAPATMA SİSTEMİ
+        const overlay = document.querySelector('#screen-overlay');
+        overlay.addEventListener('click', () => {
+          if (activeVideo) {
+            activeVideo.pause();
+            activeVideo.currentTime = 0;
+            activeVideo = null;
           }
-          if (this.texture) {
-            this.texture.needsUpdate = true;
-          }
-        }
+          cancelAnimationFrame(animationLoop);
+          overlay.style.display = 'none';
+        });
       });
 
-      // 2. SADECE GÖRSEL BULUNDUĞUNDA VİDEOYU BAŞLATAN EN SADE BİLEŞEN
-      AFRAME.registerComponent('video-handler', {
+      // HAFİF VE HIZLI 2B SAF YEŞİL (#00FF00) SİLME MOTORU
+      function renderChromaKey() {
+        if (!activeVideo || activeVideo.paused || activeVideo.ended) return;
+
+        ctx.drawImage(activeVideo, 0, 0, canvas.width, canvas.height);
+        
+        const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const length = frame.data.length;
+
+        for (let i = 0; i < length; i += 4) {
+          let r = frame.data[i];
+          let g = frame.data[i + 1];
+          let b = frame.data[i + 2];
+
+          // #00ff00 saf yeşili hassas şekilde şeffaflaştıran formül
+          if (g > 130 && g > r * 1.3 && g > b * 1.3) {
+            frame.data[i + 3] = 0; // Pikseli görünmez yapar
+          }
+        }
+        ctx.putImageData(frame, 0, 0);
+        animationLoop = requestAnimationFrame(renderChromaKey);
+      }
+
+      // RADAR GİBİ ÇALIŞAN JAVASCRIPT TAKİP BİLEŞENİ
+      AFRAME.registerComponent('marker-handler', {
         init: function () {
           const marker = this.el;
-          const video = document.querySelector('#vid-giseler');
+          const videoId = marker.getAttribute('data-video');
+          const video = document.querySelector(videoId);
 
           marker.addEventListener('markerFound', function () {
-            if (video) {
-              video.play().catch(err => console.log("Video oynatılamadı:", err));
-            }
-          });
+            // Eğer ekranda zaten oynayan bir video varsa yenisini tetikleme
+            if (activeVideo) return; 
 
-          marker.addEventListener('markerLost', function () {
-            if (video) {
-              video.pause();
-              video.currentTime = 0;
+            activeVideo = video;
+
+            // Canvas çözünürlüğünü videonun orijinal kalitesine göre dinamik eşitler
+            if (video.videoWidth) {
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+            } else {
+              canvas.width = 1080;
+              canvas.height = 1080; // İlk yüklemede hazır değilse varsayılan kare buffer
             }
+
+            // Katmanı görünür yap ve videoyu oynat
+            document.querySelector('#screen-overlay').style.display = 'flex';
+            video.currentTime = 0;
+            video.play().catch(err => console.log("Oynatma engeli:", err));
+            
+            renderChromaKey();
           });
         }
       });
@@ -89,18 +109,52 @@
   </head>
 
   <body style="margin: 0px; overflow: hidden;">
+
+    <div id="screen-overlay">
+      <canvas id="chroma-canvas"></canvas>
+    </div>
     
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720;">
       
       <a-assets>
+        <video id="vid-altkat" src="videos/alt-kat.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-asansorler" src="videos/asansorler.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-atm" src="videos/atm.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-bebek" src="videos/bebek-bakim-odasi.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-bekleme" src="videos/bekleme-salonu.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
         <video id="vid-giseler" src="videos/giseler.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-kayipesya" src="videos/kayip-esya-burosu.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-market" src="videos/market.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-mescit" src="videos/mescit.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-metro" src="videos/metro.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-otobus" src="videos/otobus.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-peronlar" src="videos/peronlar.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-restaurant" src="videos/restaurant.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-sag" src="videos/sag.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-sol" src="videos/sol.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-taksi" src="videos/taksi.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-ustkat" src="videos/ust-kat.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
+        <video id="vid-yuruyen" src="videos/yuruyen-merdivenler.mp4" loop="true" muted playsinline crossorigin="anonymous"></video>
       </a-assets>
 
-      <a-marker type="pattern" url="markers/giseler.patt" video-handler>
-        
-        <a-plane chromakey-video="src: #vid-giseler" width="1.2" height="1.2" rotation="-90 0 0"></a-plane>
-
-      </a-marker>
+      <a-marker type="pattern" url="markers/alt-kat.patt" marker-handler data-video="#vid-altkat"></a-marker>
+      <a-marker type="pattern" url="markers/asansorler.patt" marker-handler data-video="#vid-asansorler"></a-marker>
+      <a-marker type="pattern" url="markers/atm.patt" marker-handler data-video="#vid-atm"></a-marker>
+      <a-marker type="pattern" url="markers/bebek-bakim-odasi.patt" marker-handler data-video="#vid-bebek"></a-marker>
+      <a-marker type="pattern" url="markers/bekleme-salonu.patt" marker-handler data-video="#vid-bekleme"></a-marker>
+      <a-marker type="pattern" url="markers/giseler.patt" marker-handler data-video="#vid-giseler"></a-marker>
+      <a-marker type="pattern" url="markers/kayip-esya-burosu.patt" marker-handler data-video="#vid-kayipesya"></a-marker>
+      <a-marker type="pattern" url="markers/market.patt" marker-handler data-video="#vid-market"></a-marker>
+      <a-marker type="pattern" url="markers/mescit.patt" marker-handler data-video="#vid-mescit"></a-marker>
+      <a-marker type="pattern" url="markers/metro.patt" marker-handler data-video="#vid-metro"></a-marker>
+      <a-marker type="pattern" url="markers/otobus.patt" marker-handler data-video="#vid-otobus"></a-marker>
+      <a-marker type="pattern" url="markers/peronlar.patt" marker-handler data-video="#vid-peronlar"></a-marker>
+      <a-marker type="pattern" url="markers/restaurant.patt" marker-handler data-video="#vid-restaurant"></a-marker>
+      <a-marker type="pattern" url="markers/sag.patt" marker-handler data-video="#vid-sag"></a-marker>
+      <a-marker type="pattern" url="markers/sol.patt" marker-handler data-video="#vid-sol"></a-marker>
+      <a-marker type="pattern" url="markers/taksi.patt" marker-handler data-video="#vid-taksi"></a-marker>
+      <a-marker type="pattern" url="markers/ust-kat.patt" marker-handler data-video="#vid-ustkat"></a-marker>
+      <a-marker type="pattern" url="markers/yuruyen-merdivenler.patt" marker-handler data-video="#vid-yuruyen"></a-marker>
 
       <a-entity camera></a-entity>
     </a-scene>
