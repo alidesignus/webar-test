@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>WebAR - Minimalist HUD Keskin Hatlı Veri Sistemi</title>
+    <title>WebAR - Çok Dilli HUD Bilgi Sistemi</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://ar-js-org.github.io/AR.js/aframe/build/aframe-ar.js"></script>
     
@@ -32,95 +32,234 @@
         object-fit: cover;     
         cursor: pointer;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); 
-        border-radius: 0px; /* Keskin köşeler */
+        border-radius: 0px; /* Keskin düz köşeler */
       }
 
-      /* VİDEO İLE BİREBİR GENİŞLİKTE, KESKİN HATLI FİLİGRAN METİN PANELİ */
+      /* VİDEO İLE BİREBİR EŞİTLENMİŞ MİKRO FİLİGRAN PANEL */
       #info-text {
-        margin-top: 20px; /* İstediğin net 20px boşluk */
+        margin-top: 20px; /* Video ile arasında net 20px boşluk */
         color: #ffffff;
         font-family: 'Inter', sans-serif;
-        font-size: 1rem;
+        font-size: 0.88rem; /* Kaba durmayan, küçültülmüş mikro yazı boyutu */
         line-height: 1.6;
-        font-weight: 400; /* Yazılar normal */
+        font-weight: 400; 
         text-align: left;  
-        background: rgba(0, 0, 0, 0.75); /* Tam istediğin siyah filigran görünümü */
-        padding: 16px 24px;
-        border-radius: 0px; /* Kavisler tamamen kaldırıldı, düz keskin köşeler */
+        background: rgba(0, 0, 0, 0.85); /* Siyah pürüzsüz filigran */
+        padding: 14px 20px;
+        border-radius: 0px; /* Sıfır kavis, tamamen düz keskin köşeler */
         border: none; /* Dış kontür/çizgi tamamen kaldırıldı */
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         width: 90%;
-        max-width: 1080px; /* Video genişliğiyle milimetrik eşitleme */
-        box-sizing: border-box; /* Padding değerlerinin genişliği saptırmasını önler */
+        max-width: 1080px; 
+        box-sizing: border-box; 
         display: none; 
       }
 
-      /* Sayısal ve kritik verilerin bold (kalın) olması için */
+      /* Verilerin bold (kalın) olması için */
       #info-text strong {
         font-weight: 700;
         color: #ffffff;
       }
 
+      /* MİNİMALİST ÇİFT DİL SEÇİCİ BAR */
+      #lang-switcher {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        padding-bottom: 6px;
+      }
+
+      .lang-btn {
+        cursor: pointer;
+        opacity: 0.4;
+        font-size: 0.85rem;
+        transition: opacity 0.2s;
+        user-select: none;
+      }
+
+      .lang-btn.active {
+        opacity: 1;
+        font-weight: 700;
+        color: #ffcc00; /* Seçili dili vurgulayan altın sarısı tonu */
+      }
+
       /* Tarayıcı ses engeli uyarısı */
       .audio-alert {
         display: block;
-        margin-top: 6px;
-        font-size: 0.85rem;
+        margin-top: 8px;
+        font-size: 0.8rem;
         color: #ffcc00;
         font-weight: 400;
+      }
+
+      /* Canlı rötar uyarısının kırmızı görünmesi için */
+      .rotar-alert {
+        color: #ff3333 !important;
+        font-weight: 700;
       }
     </style>
 
     <script>
-      let video, overlay, infoText;
+      let video, overlay, infoText, infoContent;
       let isPlaying = false;
       let hasInteracted = false;
+      let currentLang = 'tr'; // Varsayılan sistem dili
+      let currentActiveVideoFile = "";
+      let countdownInterval = null;
 
-      // Kullanıcının ekrana dokunup dokunmadığını takip eder (Ses kilidini açmak için)
+      // Sanal Peron Zamanlayıcıları (Saniye cinsinden: 5 dk 45 sn ve 12 dk 10 sn)
+      let peron1Sure = 345;
+      let peron2Sure = 730;
+
+      // Kullanıcının ekrana dokunma takibi (Ses kilidi için)
       window.addEventListener('click', () => { hasInteracted = true; });
       window.addEventListener('touchstart', () => { hasInteracted = true; });
 
       // ==========================================
-      // GÜNCELLENMİŞ İKİ SATIRLI, KESKİN VE BOLD VERİ HAVUZU
+      // ÇİFT DİLLİ VE GÜNCELLENMİŞ ARABİRİM VERİ HAVUZU
       // ==========================================
       const anlikVeriler = {
-        "asansorler.mp4": "🛗 Asansör Kapasitesi: <strong>14 Kişi</strong><br>💪 Maksimum Taşıma Ağırlığı: <strong>1050 kg</strong>",
-        "atm.mp4": "🏧 ATM Güncel Durum: <strong>Aktif</strong><br>💰 Günlük Çekilebilir Toplam Nakit: <strong>250.000 TL</strong>",
-        "bebek-bakim-odasi.mp4": "🍼 Oda Kullanım Durumu: <strong>Müsait / Boş</strong><br>✨ Son Dezenfeksiyon Saati: <strong>09:30</strong>",
-        "bekleme-salonu.mp4": "🌡️ Salon Sıcaklığı: <strong>22°C</strong><br>👥 Güncel Doluluk Oranı: <strong>%45</strong>",
-        "giseler.mp4": "🎫 Ankara - İstanbul YHT Ekonomi Bilet: <strong>430,00 TL</strong><br>💼 Ankara - İstanbul YHT Business Bilet: <strong>650,00 TL</strong>",
-        "kayip-esya-burosu.mp4": "💼 Büro Çalışma Durumu: <strong>Açık</strong><br>🕒 Hafta İçi Çalışma Saatleri: <strong>09:00 - 18:00</strong>",
-        "peronlar.mp4": "📢 Aktif Sefer Durumu: <strong>Rötarsız / Zamanında</strong><br>🚊 Toplam Peron Hattı: <strong>12 Hat Aktif</strong>",
-        "restaurant.mp4": "🕒 Restaurant Hizmet Saatleri: <strong>07:00 - 22:00</strong><br>🍽️ Günün Menüsü (Kavurma + Pilav): <strong>180,00 TL</strong>",
-        "taksi.mp4": "🚕 Taksi KM Ücreti: <strong>45,00 TL</strong><br>💵 Açılış Ücreti: <strong>65,00 TL</strong>",
-        
-        // Diğer istasyon yönlendirmeleri için şık ve hızlı şablon veriler
-        "metro.mp4": "🚇 Ankaray / Metro Sefer Sıklığı: <strong>5 dk</strong><br>🚨 Son Sefer Kalkış Saati: <strong>00:10</strong>",
-        "otobus.mp4": "🚌 Şehirlerarası Peron Durumu: <strong>Seferler Aktif</strong><br>⏱️ Ortalama Kalkış Sıklığı: <strong>15 dk</strong>",
-        "market.mp4": "🛒 İstasyon Market Alanı: <strong>Açık</strong><br>🕒 Kesintisiz Hizmet Saatleri: <strong>06:00 - 00:00</strong>",
-        "mescit.mp4": "🕌 Mescit Bölümü Kapasitesi: <strong>80 Kişi</strong><br>🧹 Günlük Periyodik Temizlik: <strong>Yapıldı</strong>",
-        "ust-kat.mp4": "🔼 Bölge İçeriği: <strong>Yemek Alanı (Food Court)</strong><br>🛍️ Alışveriş Mağazaları: <strong>Mevcut</strong>",
-        "alt-kat.mp4": "🔽 Bölge İçeriği: <strong>Kapalı Otopark & Emanet Ofisi</strong><br>🧼 Ücretsiz Oto Yıkama: <strong>Aktif</strong>",
-        "sag.mp4": "➡️ Yön Biçimi: <strong>Ana Çıkış Kapısı</strong><br>📍 Peronlara Olan Mesafe: <strong>45 metre</strong>",
-        "sol.mp4": "⬅️ Yön Biçimi: <strong>İç Hat Gişeleri</strong><br>📍 Peronlara Olan Mesafe: <strong>20 metre</strong>",
-        "yuruyen-merdivenler.mp4": "⚡ Mekanik Durum: <strong>Arızasız / Aktif</strong><br>🏃‍♂️ Akıllı Sensör Modu: <strong>Devrede</strong>"
+        "asansorler.mp4": {
+          tr: "🛗 Asansör Kapasitesi: <strong>14 Kişi</strong><br>💪 Maksimum Taşıma Ağırlığı: <strong>1050 kg</strong>",
+          en: "🛗 Elevator Capacity: <strong>14 People</strong><br>💪 Maximum Weight Capacity: <strong>1050 kg</strong>"
+        },
+        "atm.mp4": {
+          tr: "🏧 ATM Güncel Durum: <strong>Aktif</strong><br>💰 Günlük Çekilebilir Toplam Nakit: <strong>250.000 TL</strong>",
+          en: "🏧 ATM Current Status: <strong>Active</strong><br>💰 Max Daily Withdrawal Limit: <strong>250,000 TL</strong>"
+        },
+        "bebek-bakim-odasi.mp4": {
+          tr: "🍼 Oda Durumu: <strong>Müsait / Temiz</strong><br>✨ Donanım: <strong>Alt Değiştirme Ünitesi & Emzirme Koltuğu</strong>",
+          en: "🍼 Room Status: <strong>Available / Clean</strong><br>✨ Amenities: <strong>Diaper Changing Station & Nursing Chair</strong>"
+        },
+        "bekleme-salonu.mp4": {
+          tr: "🌡️ Salon Sıcaklığı: <strong>22°C</strong><br>👥 Güncel Doluluk Oranı: <strong>%45</strong>",
+          en: "🌡️ Lounge Temperature: <strong>22°C</strong><br>👥 Current Occupancy Rate: <strong>%45</strong>"
+        },
+        "giseler.mp4": {
+          tr: "🎫 Ankara - İstanbul YHT Ekonomi Bilet: <strong>430,00 TL</strong><br>💼 Ankara - İstanbul YHT Business Bilet: <strong>650,00 TL</strong>",
+          en: "🎫 Ankara - Istanbul YHT Economy Ticket: <strong>430.00 TL</strong><br>💼 Ankara - Istanbul YHT Business Ticket: <strong>650.00 TL</strong>"
+        },
+        "kayip-esya-burosu.mp4": {
+          tr: "💼 Büro Çalışma Durumu: <strong>Açık</strong><br>🕒 Hafta İçi Çalışma Saatleri: <strong>09:00 - 18:00</strong>",
+          en: "💼 Office Status: <strong>Open</strong><br>🕒 Weekday Working Hours: <strong>09:00 - 18:00</strong>"
+        },
+        "restaurant.mp4": {
+          tr: "🕒 Hizmet Saatleri: <strong>07:00 - 22:00</strong><br>🍽️ Günün Menüsü (Yayla Çorbası, Izgara Köfte, Kemalpaşa, Ayran): <strong>240,00 TL</strong>",
+          en: "🕒 Service Hours: <strong>07:00 - 22:00</strong><br>🍽️ Menu of the Day (Yayla Soup, Grilled Meatballs, Dessert, Ayran): <strong>240.00 TL</strong>"
+        },
+        "taksi.mp4": {
+          tr: "🚕 Taksi KM Ücreti: <strong>45,00 TL</strong><br>💵 Açılış Ücreti: <strong>65,00 TL</strong>",
+          en: "🚕 Taxi Fee per KM: <strong>45.00 TL</strong><br>💵 Base Opening Fare: <strong>65.00 TL</strong>"
+        },
+        "metro.mp4": {
+          tr: "🚇 Ankaray / Metro Sefer Sıklığı: <strong>5 dk</strong><br>🚨 Son Sefer Kalkış Saati: <strong>00:10</strong>",
+          en: "🚇 Metro / Rail Frequency: <strong>5 min</strong><br>🚨 Last Train Departure: <strong>00:10</strong>"
+        },
+        "otobus.mp4": {
+          tr: "🚌 Otobüs Peronları: <strong>Seferler Aktif</strong><br>⏱️ Ortalama Kalkış Sıklığı: <strong>15 dk</strong>",
+          en: "🚌 Bus Platforms: <strong>Operations Active</strong><br>⏱️ Average Departure Interval: <strong>15 min</strong>"
+        },
+        "market.mp4": {
+          tr: "🛒 İstasyon Market Alanı: <strong>Açık</strong><br>🕒 Kesintisiz Hizmet Saatleri: <strong>06:00 - 00:00</strong>",
+          en: "🛒 Station Market Area: <strong>Open</strong><br>🕒 Non-Stop Service Hours: <strong>06:00 - 00:00</strong>"
+        },
+        "mescit.mp4": {
+          tr: "🕌 Mescit Bölümü Kapasitesi: <strong>80 Kişi</strong><br>🧹 Günlük Periyodik Temizlik: <strong>Yapıldı</strong>",
+          en: "🕌 Prayer Room Capacity: <strong>80 People</strong><br>🧹 Daily Periodic Cleaning: <strong>Completed</strong>"
+        },
+        "ust-kat.mp4": {
+          tr: "🔼 Bölge İçeriği: <strong>Yemek Alanı (Food Court)</strong><br>🛍️ Alışveriş Mağazaları: <strong>Mevcut</strong>",
+          en: "🔼 Area Content: <strong>Food Court</strong><br>🛍️ Shopping Stores: <strong>Available</strong>"
+        },
+        "alt-kat.mp4": {
+          tr: "🔽 Bölge İçeriği: <strong>Kapalı Otopark & Emanet Ofisi</strong><br>🧼 Ücretsiz Oto Yıkama: <strong>Aktif</strong>",
+          en: "🔽 Area Content: <strong>Indoor Parking & Left Baggage</strong><br>🧼 Free Car Wash: <strong>Active</strong>"
+        },
+        "sag.mp4": {
+          tr: "➡️ Yön Biçimi: <strong>Ana Çıkış Kapısı</strong><br>📍 Peronlara Olan Mesafe: <strong>45 metre</strong>",
+          en: "➡️ Direction: <strong>Main Exit Gate</strong><br>📍 Distance to Platforms: <strong>45 meters</strong>"
+        },
+        "sol.mp4": {
+          tr: "⬅️ Yön Biçimi: <strong>İç Hat Gişeleri</strong><br>📍 Peronlara Olan Mesafe: <strong>20 metre</strong>",
+          en: "⬅️ Direction: <strong>Domestic Ticket Counters</strong><br>📍 Distance to Platforms: <strong>20 meters</strong>"
+        },
+        "yuruyen-merdivenler.mp4": {
+          tr: "⚡ Mekanik Durum: <strong>Arızasız / Aktif</strong><br>🏃‍♂️ Akıllı Sensör Modu: <strong>Devrede</strong>",
+          en: "⚡ Mechanical Status: <strong>Operational / Active</strong><br>🏃‍♂️ Smart Sensor Mode: <strong>Enabled</strong>"
+        }
       };
 
       window.addEventListener('DOMContentLoaded', () => {
         video = document.querySelector('#main-video');
         overlay = document.querySelector('#screen-overlay');
         infoText = document.querySelector('#info-text');
+        infoContent = document.querySelector('#info-content');
 
-        /* VİDEO KAPATMA AKSİYONU */
+        /* VİDEO KAPATMA VE TIMEOUT SIFIRLAMA AKSİYONU */
         overlay.addEventListener('click', () => {
           isPlaying = false;
           video.pause();
           video.src = ""; 
+          clearInterval(countdownInterval);
           infoText.style.display = 'none';
-          infoText.innerHTML = "";
+          infoContent.innerHTML = "";
           overlay.style.display = 'none';
         });
       });
+
+      // Saniyeleri Saat Tasarımına (MM:SS) Çeviren Yardımcı Fonksiyon
+      function saniyeyiFormatla(toplamSaniye) {
+        if (toplamSaniye <= 0) return "00:00";
+        let dakika = Math.floor(toplamSaniye / 60);
+        let saniye = toplamSaniye % 60;
+        return (dakika < 10 ? "0" : "") + dakika + ":" + (saniye < 10 ? "0" : "") + saniye;
+      }
+
+      // METİN İÇERİĞİNİ EKRANA BASAN VE DİLİ GÜNCELLEYEN ANA MOTOR
+      function metniYazdir() {
+        if (!currentActiveVideoFile) return;
+
+        let metinIcerigi = "";
+
+        // EĞER OKUTULAN PERONLAR VİDEOSUYSA (CANLI GERİ SAYIM SİMÜLASYONU)
+        if (currentActiveVideoFile === "peronlar.mp4") {
+          if (currentLang === 'tr') {
+            metinIcerigi = "🚊 Peron 1: Ankara - İstanbul YHT Yanaşıyor ➡️ Kalan Süre: <strong>" + saniyeyiFormatla(peron1Sure) + "</strong><br>" +
+                           "🚊 Peron 2: Konya - Ankara YHT Peronda ➡️ Kalan Süre: <strong>" + saniyeyiFormatla(peron2Sure) + "</strong><br>" +
+                           "⚠️ Peron 3: Ankara - Sivas YHT Durumu ➡️ <span class='rotar-alert'>25 Dakika Rötar / Gecikme</span>";
+          } else {
+            metinIcerigi = "🚊 Platform 1: Ankara - Istanbul YHT Approaching ➡️ Time Left: <strong>" + saniyeyiFormatla(peron1Sure) + "</strong><br>" +
+                           "🚊 Platform 2: Konya - Ankara YHT at Platform ➡️ Time Left: <strong>" + saniyeyiFormatla(peron2Sure) + "</strong><br>" +
+                           "⚠️ Platform 3: Ankara - Sivas YHT Status ➡️ <span class='rotar-alert'>25 Minutes Delayed</span>";
+          }
+        } else {
+          // STANDART DİĞER VİDEOLARIN ÇİFT DİL METİNLERİ
+          metinIcerigi = anlikVeriler[currentActiveVideoFile][currentLang];
+        }
+
+        // Tarayıcı otomatik ses engeline takıldıysa altına uyarı ekle
+        if (video.muted) {
+          if (currentLang === 'tr') {
+            metinIcerigi += "<span class='audio-alert'>🔊 Sesi açmak için ekrana bir kez dokunun.</span>";
+          } else {
+            metinIcerigi += "<span class='audio-alert'>🔊 Tap anywhere on the screen to unmute audio.</span>";
+          }
+        }
+
+        infoContent.innerHTML = metinIcerigi;
+      }
+
+      // DİL DEĞİŞTİRME FONKSİYONU (Ekrana dokununca kapanmayı engellemek için event durdurulur)
+      function diliDegistir(lang, event) {
+        if (event) event.stopPropagation(); // Üst katmandaki overlay kapatma click'ini bloke eder
+        currentLang = lang;
+        
+        document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('btn-' + lang).classList.add('active');
+        
+        metniYazdir();
+      }
 
       /* RADAR TAKİP MOTORU */
       AFRAME.registerComponent('marker-handler', {
@@ -132,11 +271,12 @@
             if (isPlaying) return; 
 
             isPlaying = true;
+            currentActiveVideoFile = videoFile;
             
             video.src = "videos/" + videoFile;
             video.load();
             
-            // Kullanıcı ekrana dokunduysa videolar direkt sesli başlar
+            // Kullanıcı önceden etkileşime girdiyse direkt sesli açılır
             video.muted = !hasInteracted;
             
             const playPromise = video.play();
@@ -144,17 +284,19 @@
             if (playPromise !== undefined) {
               playPromise.then(() => {
                 overlay.style.display = 'flex';
+                infoText.style.display = 'block';
                 
-                if (anlikVeriler[videoFile]) {
-                  let metinIcerigi = anlikVeriler[videoFile];
-                  
-                  // Tarayıcı ses korumasına takıldıysa alta ufak bir uyarı ekler
-                  if (video.muted) {
-                    metinIcerigi += "<span class='audio-alert'>🔊 Sesi açmak için ekrana bir kez dokunun.</span>";
-                  }
-                  
-                  infoText.innerHTML = metinIcerigi;
-                  infoText.style.display = 'block';
+                // İlk metni yazdır
+                metniYazdir();
+
+                // EĞER PERONLAR VİDEOSUYSA GERI SAYIM SAYACINI BAŞLAT
+                clearInterval(countdownInterval);
+                if (videoFile === "peronlar.mp4") {
+                  countdownInterval = setInterval(() => {
+                    if (peron1Sure > 0) peron1Sure--;
+                    if (peron2Sure > 0) peron2Sure--;
+                    metniYazdir(); // Her saniye yazıyı canlı güncelle
+                  }, 1000);
                 }
               }).catch(err => {
                 console.log("Oynatma engeli:", err);
@@ -171,7 +313,15 @@
 
     <div id="screen-overlay">
       <video id="main-video" loop playsinline crossorigin="anonymous"></video>
-      <div id="info-text"></div> </div>
+      
+      <div id="info-text">
+        <div id="lang-switcher">
+          <span id="btn-tr" class="lang-btn active" onclick="diliDegistir('tr', event)">🇹🇷 TR</span>
+          <span id="btn-en" class="lang-btn" onclick="diliDegistir('en', event)">🇬🇧 EN</span>
+        </div>
+        <div id="info-content"></div>
+      </div>
+    </div>
     
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720;">
       
