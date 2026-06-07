@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>WebAR - Minimalist HUD Sesli Veri Sistemi</title>
+    <title>WebAR - Minimalist HUD Keskin Hatlı Veri Sistemi</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://ar-js-org.github.io/AR.js/aframe/build/aframe-ar.js"></script>
     
@@ -32,31 +32,30 @@
         object-fit: cover;     
         cursor: pointer;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); 
-        border-radius: 8px;
+        border-radius: 0px; /* Keskin köşeler */
       }
 
-      /* MİNİMALİST, MODERN VE DÜZENLİ BİLGİ PANELİ */
+      /* VİDEO İLE BİREBİR GENİŞLİKTE, KESKİN HATLI FİLİGRAN METİN PANELİ */
       #info-text {
-        margin-top: 24px;
+        margin-top: 20px; /* İstediğin net 20px boşluk */
         color: #ffffff;
         font-family: 'Inter', sans-serif;
         font-size: 1rem;
         line-height: 1.6;
         font-weight: 400; /* Yazılar normal */
-        text-align: left;  /* İçerik düzenli dursun diye sola yaslı */
-        background: rgba(20, 20, 20, 0.8); /* Minimal koyu arka plan */
-        backdrop-filter: blur(15px); /* Premium cam efekti */
-        -webkit-backdrop-filter: blur(15px);
-        padding: 16px 28px;
-        border-radius: 14px; /* Minimal hafif oval köşeler */
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        text-align: left;  
+        background: rgba(0, 0, 0, 0.75); /* Tam istediğin siyah filigran görünümü */
+        padding: 16px 24px;
+        border-radius: 0px; /* Kavisler tamamen kaldırıldı, düz keskin köşeler */
+        border: none; /* Dış kontür/çizgi tamamen kaldırıldı */
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-        max-width: 90%;
-        width: fit-content; /* İçeriğe göre otomatik daralan şık kutu */
+        width: 90%;
+        max-width: 1080px; /* Video genişliğiyle milimetrik eşitleme */
+        box-sizing: border-box; /* Padding değerlerinin genişliği saptırmasını önler */
         display: none; 
       }
 
-      /* Fiyatların bold (kalın) olması için */
+      /* Sayısal ve kritik verilerin bold (kalın) olması için */
       #info-text strong {
         font-weight: 700;
         color: #ffffff;
@@ -82,27 +81,29 @@
       window.addEventListener('touchstart', () => { hasInteracted = true; });
 
       // ==========================================
-      // İSTEDİĞİN FORMATTA İKİ SATIRLI VE BOLD VERİ HAVUZU
+      // GÜNCELLENMİŞ İKİ SATIRLI, KESKİN VE BOLD VERİ HAVUZU
       // ==========================================
       const anlikVeriler = {
+        "asansorler.mp4": "🛗 Asansör Kapasitesi: <strong>14 Kişi</strong><br>💪 Maksimum Taşıma Ağırlığı: <strong>1050 kg</strong>",
+        "atm.mp4": "🏧 ATM Güncel Durum: <strong>Aktif</strong><br>💰 Günlük Çekilebilir Toplam Nakit: <strong>250.000 TL</strong>",
+        "bebek-bakim-odasi.mp4": "🍼 Oda Kullanım Durumu: <strong>Müsait / Boş</strong><br>✨ Son Dezenfeksiyon Saati: <strong>09:30</strong>",
+        "bekleme-salonu.mp4": "🌡️ Salon Sıcaklığı: <strong>22°C</strong><br>👥 Güncel Doluluk Oranı: <strong>%45</strong>",
+        "giseler.mp4": "🎫 Ankara - İstanbul YHT Ekonomi Bilet: <strong>430,00 TL</strong><br>💼 Ankara - İstanbul YHT Business Bilet: <strong>650,00 TL</strong>",
+        "kayip-esya-burosu.mp4": "💼 Büro Çalışma Durumu: <strong>Açık</strong><br>🕒 Hafta İçi Çalışma Saatleri: <strong>09:00 - 18:00</strong>",
+        "peronlar.mp4": "📢 Aktif Sefer Durumu: <strong>Rötarsız / Zamanında</strong><br>🚊 Toplam Peron Hattı: <strong>12 Hat Aktif</strong>",
+        "restaurant.mp4": "🕒 Restaurant Hizmet Saatleri: <strong>07:00 - 22:00</strong><br>🍽️ Günün Menüsü (Kavurma + Pilav): <strong>180,00 TL</strong>",
         "taksi.mp4": "🚕 Taksi KM Ücreti: <strong>45,00 TL</strong><br>💵 Açılış Ücreti: <strong>65,00 TL</strong>",
-        "giseler.mp4": "⏱️ Anlık Gişe Yoğunluğu: <strong>Normal</strong><br>⏳ Ortalama Bekleme: <strong>4 dk</strong>",
-        "atm.mp4": "🏧 ATM Durumu: <strong>Aktif</strong><br>💳 Tüm Kartlar: <strong>Komisyonsuz</strong>",
-        "metro.mp4": "🚇 Metro Sefer Sıklığı: <strong>5 dk</strong><br>🚨 Son Sefer Saati: <strong>00:00</strong>",
-        "otobus.mp4": "🚌 Peron Durumu: <strong>Araç Hazır</strong><br>⏱️ Kalkış Saatine: <strong>12 dk</strong>",
-        "bekleme-salonu.mp4": "🌡️ Salon Sıcaklığı: <strong>22°C</strong><br>👥 Güncel Doluluk: <strong>%45</strong>",
-        "bebek-bakim-odasi.mp4": "🍼 Bebek Odası: <strong>Müsait</strong><br>✨ Hijyen Kontrolü: <strong>Yapıldı</strong>",
-        "market.mp4": "🛒 Market Durumu: <strong>Açık</strong><br>🕒 Kapanış Saati: <strong>23:00</strong>",
-        "mescit.mp4": "🕌 Mescit Durumu: <strong>Açık</strong><br>🧹 Son Temizlik: <strong>1 saat önce</strong>",
-        "peronlar.mp4": "ℹ️ Aktif Peron Sayısı: <strong>12 Peron</strong><br>📢 Güncel Rötar: <strong>Yok</strong>",
-        "restaurant.mp4": "🍽️ Yemek Alanı: <strong>Açık</strong><br>🍔 Menü Çeşitliliği: <strong>Zengin</strong>",
-        "asansorler.mp4": "🛗 Asansör Grubu: <strong>Aktif</strong><br>🔧 Periyodik Bakım: <strong>Tamamlandı</strong>",
-        "kayip-esya-burosu.mp4": "💼 Büro Durumu: <strong>Açık</strong><br>🕒 Mesai Bitişi: <strong>18:00</strong>",
-        "yuruyen-merdivenler.mp4": "⚡ Teknik Durum: <strong>Arızasız</strong><br>🏃‍♂️ Enerji Tasarrufu: <strong>Aktif</strong>",
-        "ust-kat.mp4": "🔼 Bölge İçeriği: <strong>Yemek Alanı</strong><br>👶 Çocuk Parkı: <strong>Mevcut</strong>",
-        "alt-kat.mp4": "🔽 Bölge İçeriği: <strong>Otopark</strong><br>🧼 Oto Yıkama: <strong>Aktif</strong>",
-        "sag.mp4": "➡️ Yön Biçimi: <strong>Çıkış Kapısı</strong><br>📍 Mesafe: <strong>45 metre</strong>",
-        "sol.mp4": "⬅️ Yön Biçimi: <strong>İç Hatlar</strong><br>📍 Mesafe: <strong>20 metre</strong>"
+        
+        // Diğer istasyon yönlendirmeleri için şık ve hızlı şablon veriler
+        "metro.mp4": "🚇 Ankaray / Metro Sefer Sıklığı: <strong>5 dk</strong><br>🚨 Son Sefer Kalkış Saati: <strong>00:10</strong>",
+        "otobus.mp4": "🚌 Şehirlerarası Peron Durumu: <strong>Seferler Aktif</strong><br>⏱️ Ortalama Kalkış Sıklığı: <strong>15 dk</strong>",
+        "market.mp4": "🛒 İstasyon Market Alanı: <strong>Açık</strong><br>🕒 Kesintisiz Hizmet Saatleri: <strong>06:00 - 00:00</strong>",
+        "mescit.mp4": "🕌 Mescit Bölümü Kapasitesi: <strong>80 Kişi</strong><br>🧹 Günlük Periyodik Temizlik: <strong>Yapıldı</strong>",
+        "ust-kat.mp4": "🔼 Bölge İçeriği: <strong>Yemek Alanı (Food Court)</strong><br>🛍️ Alışveriş Mağazaları: <strong>Mevcut</strong>",
+        "alt-kat.mp4": "🔽 Bölge İçeriği: <strong>Kapalı Otopark & Emanet Ofisi</strong><br>🧼 Ücretsiz Oto Yıkama: <strong>Aktif</strong>",
+        "sag.mp4": "➡️ Yön Biçimi: <strong>Ana Çıkış Kapısı</strong><br>📍 Peronlara Olan Mesafe: <strong>45 metre</strong>",
+        "sol.mp4": "⬅️ Yön Biçimi: <strong>İç Hat Gişeleri</strong><br>📍 Peronlara Olan Mesafe: <strong>20 metre</strong>",
+        "yuruyen-merdivenler.mp4": "⚡ Mekanik Durum: <strong>Arızasız / Aktif</strong><br>🏃‍♂️ Akıllı Sensör Modu: <strong>Devrede</strong>"
       };
 
       window.addEventListener('DOMContentLoaded', () => {
@@ -135,7 +136,7 @@
             video.src = "videos/" + videoFile;
             video.load();
             
-            // Eğer kullanıcı daha önce ekrana dokunduysa direkt sesli başlat
+            // Kullanıcı ekrana dokunduysa videolar direkt sesli başlar
             video.muted = !hasInteracted;
             
             const playPromise = video.play();
@@ -147,7 +148,7 @@
                 if (anlikVeriler[videoFile]) {
                   let metinIcerigi = anlikVeriler[videoFile];
                   
-                  // Eğer tarayıcı engeli yüzünden video sessiz başladıysa alta uyarı ekle
+                  // Tarayıcı ses korumasına takıldıysa alta ufak bir uyarı ekler
                   if (video.muted) {
                     metinIcerigi += "<span class='audio-alert'>🔊 Sesi açmak için ekrana bir kez dokunun.</span>";
                   }
@@ -170,8 +171,7 @@
 
     <div id="screen-overlay">
       <video id="main-video" loop playsinline crossorigin="anonymous"></video>
-      <div id="info-text"></div> 
-    </div>
+      <div id="info-text"></div> </div>
     
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720;">
       
