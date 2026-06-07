@@ -2,12 +2,14 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>WebAR - 2D HUD Kare Video Sistemi</title>
+    <title>WebAR - 2D HUD Dinamik Veri Sistemi</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://ar-js-org.github.io/AR.js/aframe/build/aframe-ar.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet">
 
     <style>
-      /* 2B EKRAN ORTALAMA VE TAM KARE (1:1) SINIRLAMA TASARIMI */
+      /* 2B EKRAN ORTALAMA VE DIKEY YERLEŞİM TASARIMI */
       #screen-overlay {
         position: fixed;
         top: 0;
@@ -15,52 +17,99 @@
         width: 100%;
         height: 100%;
         display: none; /* İlk başta gizli, tabela okununca flex olacak */
-        justify-content: center; /* Yatayda tam ortalama */
-        align-items: center;    /* Dikeyde tam ortalama */
+        flex-direction: column; /* Video ve metni dikeyde alt alta dizer */
+        justify-content: center; 
+        align-items: center;    
         z-index: 9999;
-        background: rgba(0, 0, 0, 0.4); /* Arkadaki kamera görüntüsünü hafifçe karartır */
+        background: rgba(0, 0, 0, 0.4); 
         pointer-events: auto;
       }
 
       #main-video {
-        width: 90%;             /* Mobil ekranlarda sağdan soldan şık bir pay bırakır */
-        max-width: 1080px;      /* En fazla 1080px genişliğe çıkabilir */
-        aspect-ratio: 1 / 1;    /* 1080x1080 formatını tüm cihazlarda zorunlu kılar */
-        object-fit: cover;      /* Videonun kare alana kusursuz oturmasını sağlar */
+        width: 90%;          
+        max-width: 1080px;   
+        aspect-ratio: 1 / 1;   
+        object-fit: cover;     
         cursor: pointer;
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); /* Videonun etrafına derinlik katan gölge */
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); 
+      }
+
+      /* VİDEONUN ALTINDAKİ DİNAMİK VERİ SATIRI */
+      #info-text {
+        margin-top: 20px;
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 500;
+        text-align: center;
+        background: rgba(0, 0, 0, 0.75); /* Okunabilirliği artırmak için koyu arka plan */
+        padding: 12px 24px;
+        border-radius: 30px; /* Modern oval buton tasarımı */
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 90%;
+        width: auto;
+        letter-spacing: 0.5px;
+        display: none; /* İlk başta gizli */
       }
     </style>
 
     <script>
-      let video, overlay;
+      let video, overlay, infoText;
       let isPlaying = false;
+
+      // ==========================================
+      // HER VİDEO İÇİN ANLIK VERİ HAVUZU
+      // ==========================================
+      const anlikVeriler = {
+        "taksi.mp4": "🚕 Güncel Taksi KM Ücreti: 25,00 TL / Açılış: 40,00 TL",
+        "giseler.mp4": "⏱️ Anlık Gişe Yoğunluğu: Normal (Ortalama Bekleme: 4 dk)",
+        "atm.mp4": "🏧 ATM Durumu: Aktif | Tüm Ortak Kartlara Komisyonsuz",
+        "metro.mp4": "🚇 Bir Sonraki Metro Seferi: 3 Dakika Sonra (Peron 1)",
+        "otobus.mp4": "🚌 Şehirlerarası Otobüs Seferleri Gecikmesiz Devam Etmektedir",
+        "bekleme-salonu.mp4": "🌡️ Salon Sıcaklığı: 22°C | Doluluk Oranı: %45",
+        "bebek-bakim-odasi.mp4": "🍼 Bebek Bakım Odası: Açık / Sterilize Edildi",
+        "market.mp4": "🛒 Market Çalışma Saatleri: 07:00 - 23:00",
+        "mescit.mp4": "🕌 Mescit Bölümü Kullanıma Açık ve Temiz",
+        "peronlar.mp4": "ℹ️ Peronlar Bölgesi Canlı Sefer Takibi İçin Panolara Bakınız",
+        "restaurant.mp4": "🍽️ Yemek Alanı: Günün Menüsü Aktif",
+        "asansorler.mp4": "🛗 Asansör Durumu: Aktif | Maksimum Kapasite: 10 Kişi",
+        "kayip-esya-burosu.mp4": "💼 Kayıp Eşya Bürosu Hizmet Saatleri: 09:00 - 18:00",
+        "yuruyen-merdivenler.mp4": "⚡ Yürüyen Merdivenler: Aktif / Arıza Yok",
+        "ust-kat.mp4": "🔼 Üst Kat: Fast Food ve Çocuk Oyun Alanı",
+        "alt-kat.mp4": "🔽 Alt Kat: Otopark, Lavabolar ve Emanet Ofisi",
+        "sag.mp4": "➡️ Yönlendirme: Çıkış ve Taksi Durakları Yönü",
+        "sol.mp4": "⬅️ Yönlendirme: Şehir İçi Otobüs Peronları Yönü"
+      };
 
       window.addEventListener('DOMContentLoaded', () => {
         video = document.querySelector('#main-video');
         overlay = document.querySelector('#screen-overlay');
+        infoText = document.querySelector('#info-text');
 
-        /* VİDEOYA VEYA EKRANDAKİ KARARTIYA TIKLANDIĞINDA VİDEOYU KAPATMA SİSTEMİ */
+        /* KAPATMA AKSİYONU: EKRANA TIKLANDIĞINDA HER ŞEYİ SIFIRLAR */
         overlay.addEventListener('click', () => {
           isPlaying = false;
           video.pause();
-          video.src = ""; // Videoyu RAM hafızasından tamamen temizler
+          video.src = ""; 
+          infoText.style.display = 'none';
+          infoText.innerText = "";
           overlay.style.display = 'none';
         });
       });
 
-      /* AKILLI RADAR TAKİP MOTORU */
+      /* RADAR TAKİP MOTORU */
       AFRAME.registerComponent('marker-handler', {
         init: function () {
           const marker = this.el;
           const videoFile = marker.getAttribute('data-video'); 
 
           marker.addEventListener('markerFound', function () {
-            if (isPlaying) return; // Zaten bir video oynuyorsa çakışmasın
+            if (isPlaying) return; 
 
             isPlaying = true;
             
-            // Videoyu dinamik olarak çağırır
+            // Videoyu yükle
             video.src = "videos/" + videoFile;
             video.load();
             
@@ -68,8 +117,16 @@
             
             if (playPromise !== undefined) {
               playPromise.then(() => {
-                // Video oynamaya başladığı an ekran ortasındaki kare paneli açar
+                // 1. Ekran panelini flex olarak aç
                 overlay.style.display = 'flex';
+                
+                // 2. Havuzdan ilgili videonun metnini çek ve yazdır
+                if (anlikVeriler[videoFile]) {
+                  infoText.innerText = anlikVeriler[videoFile];
+                  infoText.style.display = 'block'; // Yazıyı görünür yap
+                } else {
+                  infoText.style.display = 'none';
+                }
               }).catch(err => {
                 console.log("Oynatma engeli:", err);
                 isPlaying = false;
@@ -85,7 +142,7 @@
 
     <div id="screen-overlay">
       <video id="main-video" loop muted playsinline crossorigin="anonymous"></video>
-    </div>
+      <div id="info-text"></div> </div>
     
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720;">
       
