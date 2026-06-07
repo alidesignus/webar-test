@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>WebAR - Çok Dilli HUD Bilgi Sistemi</title>
+    <title>WebAR - Çok Dilli HUD İstasyon Bilgi Sistemi</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://ar-js-org.github.io/AR.js/aframe/build/aframe-ar.js"></script>
     
@@ -25,6 +25,26 @@
         pointer-events: auto;
       }
 
+      /* EN-AR DİLLERİNDE VİDEONUN ÜSTÜNDE BELİREN KESKİN BAŞLIK PANELİ */
+      #video-title {
+        color: #ffffff;
+        font-family: 'Inter', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        text-align: center;
+        background: rgba(0, 0, 0, 0.85); /* Siyah pürüzsüz filigran */
+        padding: 10px 20px;
+        margin-bottom: 12px; /* Video ile arasında şık boşluk */
+        border-radius: 0px; /* Tamamen keskin düz köşeler */
+        border: none;
+        width: 90%;
+        max-width: 1080px;
+        box-sizing: border-box;
+        display: none; /* Sadece EN ve AR seçildiğinde JS ile açılacak */
+      }
+
       #main-video {
         width: 90%;          
         max-width: 1080px;   
@@ -40,14 +60,13 @@
         margin-top: 20px; /* Video ile arasında net 20px boşluk */
         color: #ffffff;
         font-family: 'Inter', sans-serif;
-        font-size: 0.88rem; /* Kaba durmayan, küçültülmüş mikro yazı boyutu */
+        font-size: 0.88rem; /* Küçültülmüş mikro yazı boyutu */
         line-height: 1.6;
         font-weight: 400; 
-        text-align: left;  
         background: rgba(0, 0, 0, 0.85); /* Siyah pürüzsüz filigran */
         padding: 14px 20px;
         border-radius: 0px; /* Sıfır kavis, tamamen düz keskin köşeler */
-        border: none; /* Dış kontür/çizgi tamamen kaldırıldı */
+        border: none; 
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         width: 90%;
         max-width: 1080px; 
@@ -61,13 +80,14 @@
         color: #ffffff;
       }
 
-      /* MİNİMALİST ÇİFT DİL SEÇİCİ BAR */
+      /* MİNİMALİST ÇOĞUL DİL SEÇİCİ BAR */
       #lang-switcher {
         display: flex;
-        gap: 14px;
+        gap: 16px;
         margin-bottom: 10px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.15);
         padding-bottom: 6px;
+        direction: ltr !important; /* Bayrak çubuğu her zaman soldan sağa kalmalı */
       }
 
       .lang-btn {
@@ -81,7 +101,7 @@
       .lang-btn.active {
         opacity: 1;
         font-weight: 700;
-        color: #ffcc00; /* Seçili dili vurgulayan altın sarısı tonu */
+        color: #ffcc00; /* Altın sarısı tonu */
       }
 
       /* Tarayıcı ses engeli uyarısı */
@@ -101,92 +121,134 @@
     </style>
 
     <script>
-      let video, overlay, infoText, infoContent;
+      let video, overlay, infoText, infoContent, videoTitle;
       let isPlaying = false;
       let hasInteracted = false;
-      let currentLang = 'tr'; // Varsayılan sistem dili
+      let currentLang = 'tr'; 
       let currentActiveVideoFile = "";
       let countdownInterval = null;
 
-      // Sanal Peron Zamanlayıcıları (Saniye cinsinden: 5 dk 45 sn ve 12 dk 10 sn)
+      // Sanal Peron Zamanlayıcıları (Saniye cinsinden)
       let peron1Sure = 345;
       let peron2Sure = 730;
 
-      // Kullanıcının ekrana dokunma takibi (Ses kilidi için)
       window.addEventListener('click', () => { hasInteracted = true; });
       window.addEventListener('touchstart', () => { hasInteracted = true; });
 
       // ==========================================
-      // ÇİFT DİLLİ VE GÜNCELLENMİŞ ARABİRİM VERİ HAVUZU
+      // ÜSTTE OYNAYAN ANİMASYONLARIN EN VE AR İSİMLERİ (TR BOŞ)
+      // ==========================================
+      const animasyonIsimleri = {
+        "asansorler.mp4": { en: "Elevators", ar: "المصاعد" },
+        "atm.mp4": { en: "ATM", ar: "صراف آلي" },
+        "bebek-bakim-odasi.mp4": { en: "Baby Care Room", ar: "غرفة رعاية الطفل" },
+        "bekleme-salonu.mp4": { en: "Waiting Lounge", ar: "صالة الانتظار" },
+        "giseler.mp4": { en: "Ticket Counters", ar: "شباك التذاكر" },
+        "kayip-esya-burosu.mp4": { en: "Lost & Found Office", ar: "مكتب المفقودات" },
+        "peronlar.mp4": { en: "Platforms", ar: "الأرصفة" },
+        "restaurant.mp4": { en: "Restaurant", ar: "المطعم" },
+        "taksi.mp4": { en: "Taxi Stand", ar: "موقف التاكسي" },
+        "metro.mp4": { en: "Metro Station", ar: "محطة المترو" },
+        "otobus.mp4": { en: "Bus Platforms", ar: "مواقف الحافلات" },
+        "market.mp4": { en: "Station Market", ar: "سوبر ماركت المحطة" },
+        "mescit.mp4": { en: "Prayer Room", ar: "المصلى" },
+        "ust-kat.mp4": { en: "Upper Floor", ar: "الطابق العلوي" },
+        "alt-kat.mp4": { en: "Lower Floor", ar: "الطابق السفلي" },
+        "sag.mp4": { en: "Right Direction", ar: "اتجاه اليمين" },
+        "sol.mp4": { en: "Left Direction", ar: "اتجاه اليسار" },
+        "yuruyen-merdivenler.mp4": { en: "Escalators", ar: "السلالم المتحركة" }
+      };
+
+      // ==========================================
+      // ÜÇ DİLLİ VE GÜNCELLENMİŞ DETAYLI VERİ HAVUZU
       // ==========================================
       const anlikVeriler = {
         "asansorler.mp4": {
           tr: "🛗 Asansör Kapasitesi: <strong>14 Kişi</strong><br>💪 Maksimum Taşıma Ağırlığı: <strong>1050 kg</strong>",
-          en: "🛗 Elevator Capacity: <strong>14 People</strong><br>💪 Maximum Weight Capacity: <strong>1050 kg</strong>"
+          en: "🛗 Elevator Capacity: <strong>14 People</strong><br>💪 Maximum Weight Capacity: <strong>1050 kg</strong>",
+          ar: "🛗 سعة المصعد: <strong>14 شخصًا</strong><br>💪 الحد الأقصى للوزن: <strong>1050 كجم</strong>"
         },
         "atm.mp4": {
           tr: "🏧 ATM Güncel Durum: <strong>Aktif</strong><br>💰 Günlük Çekilebilir Toplam Nakit: <strong>250.000 TL</strong>",
-          en: "🏧 ATM Current Status: <strong>Active</strong><br>💰 Max Daily Withdrawal Limit: <strong>250,000 TL</strong>"
+          en: "🏧 ATM Current Status: <strong>Active</strong><br>💰 Max Daily Withdrawal Limit: <strong>250,000 TL</strong>",
+          ar: "🏧 حالة الصراف الآلي: <strong>نشط</strong><br>💰 الحد الأقصى للسحب اليومي: <strong>250,000 TL</strong>"
         },
         "bebek-bakim-odasi.mp4": {
           tr: "🍼 Oda Durumu: <strong>Müsait / Temiz</strong><br>✨ Donanım: <strong>Alt Değiştirme Ünitesi & Emzirme Koltuğu</strong>",
-          en: "🍼 Room Status: <strong>Available / Clean</strong><br>✨ Amenities: <strong>Diaper Changing Station & Nursing Chair</strong>"
+          en: "🍼 Room Status: <strong>Available / Clean</strong><br>✨ Amenities: <strong>Diaper Changing Station & Nursing Chair</strong>",
+          ar: "🍼 حالة الغرفة: <strong>متاحة / نظيفة</strong><br>✨ الميزات: <strong>وحدة تغيير الحفاضات وكرسي الرضاعة</strong>"
         },
         "bekleme-salonu.mp4": {
           tr: "🌡️ Salon Sıcaklığı: <strong>22°C</strong><br>👥 Güncel Doluluk Oranı: <strong>%45</strong>",
-          en: "🌡️ Lounge Temperature: <strong>22°C</strong><br>👥 Current Occupancy Rate: <strong>%45</strong>"
+          en: "🌡️ Lounge Temperature: <strong>22°C</strong><br>👥 Current Occupancy Rate: <strong>%45</strong>",
+          ar: "🌡️ درجة حرارة الصالة: <strong>22°C</strong><br>👥 نسبة الإشغال الحالية: <strong>%45</strong>"
         },
         "giseler.mp4": {
           tr: "🎫 Ankara - İstanbul YHT Ekonomi Bilet: <strong>430,00 TL</strong><br>💼 Ankara - İstanbul YHT Business Bilet: <strong>650,00 TL</strong>",
-          en: "🎫 Ankara - Istanbul YHT Economy Ticket: <strong>430.00 TL</strong><br>💼 Ankara - Istanbul YHT Business Ticket: <strong>650.00 TL</strong>"
+          en: "🎫 Ankara - Istanbul YHT Economy Ticket: <strong>430.00 TL</strong><br>💼 Ankara - Istanbul YHT Business Ticket: <strong>650.00 TL</strong>",
+          ar: "🎫 تذكرة أنقرة - إسطنبول الدرجة الاقتصادية: <strong>430.00 TL</strong><br>💼 تذكرة أنقرة - إسطنبول درجة رجال الأعمال: <strong>650.00 TL</strong>"
         },
         "kayip-esya-burosu.mp4": {
           tr: "💼 Büro Çalışma Durumu: <strong>Açık</strong><br>🕒 Hafta İçi Çalışma Saatleri: <strong>09:00 - 18:00</strong>",
-          en: "💼 Office Status: <strong>Open</strong><br>🕒 Weekday Working Hours: <strong>09:00 - 18:00</strong>"
+          en: "💼 Office Status: <strong>Open</strong><br>🕒 Weekday Working Hours: <strong>09:00 - 18:00</strong>",
+          ar: "💼 حالة المكتب: <strong>مفتوح</strong><br>🕒 ساعات العمل في أيام الأسبوع: <strong>09:00 - 18:00</strong>"
         },
         "restaurant.mp4": {
-          tr: "🕒 Hizmet Saatleri: <strong>07:00 - 22:00</strong><br>🍽️ Günün Menüsü (Yayla Çorbası, Izgara Köfte, Kemalpaşa, Ayran): <strong>240,00 TL</strong>",
-          en: "🕒 Service Hours: <strong>07:00 - 22:00</strong><br>🍽️ Menu of the Day (Yayla Soup, Grilled Meatballs, Dessert, Ayran): <strong>240.00 TL</strong>"
+          tr: "🕒 Hizmet Saatleri: <strong>07:00 - 22:00</strong><br>🍽️ Günün Menüsü (Süzme Çorba, İskender Kebap, Fırın Sütlaç, Kutu İçecek): <strong>240,00 TL</strong>",
+          en: "🕒 Service Hours: <strong>07:00 - 22:00</strong><br>🍽️ Menu of the Day (Lentil Soup, Iskender Kebab, Baked Rice Pudding, Soft Drink): <strong>240.00 TL</strong>",
+          ar: "🕒 ساعات الخدمة: <strong>07:00 - 22:00</strong><br>🍽️ قائمة اليوم (شوربة العدس، إسكندر كباب، بودينغ الأرز الأسطوري، مشروب غازي): <strong>240.00 TL</strong>"
         },
         "taksi.mp4": {
           tr: "🚕 Taksi KM Ücreti: <strong>45,00 TL</strong><br>💵 Açılış Ücreti: <strong>65,00 TL</strong>",
-          en: "🚕 Taxi Fee per KM: <strong>45.00 TL</strong><br>💵 Base Opening Fare: <strong>65.00 TL</strong>"
+          en: "🚕 Taxi Fee per KM: <strong>45.00 TL</strong><br>💵 Base Opening Fare: <strong>65.00 TL</strong>",
+          ar: "🚕 أجرة الكيلومتر للتاكسي: <strong>45.00 TL</strong><br>💵 رسوم فتح العداد: <strong>65.00 TL</strong>"
         },
+        
+        // Diğer istasyon yönlendirmeleri için hızlı şablon veriler
         "metro.mp4": {
           tr: "🚇 Ankaray / Metro Sefer Sıklığı: <strong>5 dk</strong><br>🚨 Son Sefer Kalkış Saati: <strong>00:10</strong>",
-          en: "🚇 Metro / Rail Frequency: <strong>5 min</strong><br>🚨 Last Train Departure: <strong>00:10</strong>"
+          en: "🚇 Metro / Rail Frequency: <strong>5 min</strong><br>🚨 Last Train Departure: <strong>00:10</strong>",
+          ar: "🚇 تردد المترو: <strong>5 دقائق</strong><br>🚨 مغادرة آخر قطار: <strong>00:10</strong>"
         },
         "otobus.mp4": {
           tr: "🚌 Otobüs Peronları: <strong>Seferler Aktif</strong><br>⏱️ Ortalama Kalkış Sıklığı: <strong>15 dk</strong>",
-          en: "🚌 Bus Platforms: <strong>Operations Active</strong><br>⏱️ Average Departure Interval: <strong>15 min</strong>"
+          en: "🚌 Bus Platforms: <strong>Operations Active</strong><br>⏱️ Average Departure Interval: <strong>15 min</strong>",
+          ar: "🚌 مواقف الحافلات: <strong>الرحلات نشطة</strong><br>⏱️ متوسط وقت المغادرة: <strong>15 دقيقة</strong>"
         },
         "market.mp4": {
           tr: "🛒 İstasyon Market Alanı: <strong>Açık</strong><br>🕒 Kesintisiz Hizmet Saatleri: <strong>06:00 - 00:00</strong>",
-          en: "🛒 Station Market Area: <strong>Open</strong><br>🕒 Non-Stop Service Hours: <strong>06:00 - 00:00</strong>"
+          en: "🛒 Station Market Area: <strong>Open</strong><br>🕒 Non-Stop Service Hours: <strong>06:00 - 00:00</strong>",
+          ar: "🛒 سوبر ماركت المحطة: <strong>مفتوح</strong><br>🕒 ساعات العمل: <strong>06:00 - 00:00</strong>"
         },
         "mescit.mp4": {
           tr: "🕌 Mescit Bölümü Kapasitesi: <strong>80 Kişi</strong><br>🧹 Günlük Periyodik Temizlik: <strong>Yapıldı</strong>",
-          en: "🕌 Prayer Room Capacity: <strong>80 People</strong><br>🧹 Daily Periodic Cleaning: <strong>Completed</strong>"
+          en: "🕌 Prayer Room Capacity: <strong>80 People</strong><br>🧹 Daily Periodic Cleaning: <strong>Completed</strong>",
+          ar: "🕌 سعة المصلى: <strong>80 شخصًا</strong><br>🧹 التنظيف الدوري: <strong>تم بنجاح</strong>"
         },
         "ust-kat.mp4": {
           tr: "🔼 Bölge İçeriği: <strong>Yemek Alanı (Food Court)</strong><br>🛍️ Alışveriş Mağazaları: <strong>Mevcut</strong>",
-          en: "🔼 Area Content: <strong>Food Court</strong><br>🛍️ Shopping Stores: <strong>Available</strong>"
+          en: "🔼 Area Content: <strong>Food Court</strong><br>🛍️ Shopping Stores: <strong>Available</strong>",
+          ar: "🔼 محتوى المنطقة: <strong>منطقة المطاعم</strong><br>🛍️ محلات التسوق: <strong>متاحة</strong>"
         },
         "alt-kat.mp4": {
           tr: "🔽 Bölge İçeriği: <strong>Kapalı Otopark & Emanet Ofisi</strong><br>🧼 Ücretsiz Oto Yıkama: <strong>Aktif</strong>",
-          en: "🔽 Area Content: <strong>Indoor Parking & Left Baggage</strong><br>🧼 Free Car Wash: <strong>Active</strong>"
+          en: "🔽 Area Content: <strong>Indoor Parking & Left Baggage</strong><br>🧼 Free Car Wash: <strong>Active</strong>",
+          ar: "🔽 محتوى المنطقة: <strong>مواقف سيارات ومكتب الأمتعة</strong><br>🧼 غسيل سيارات مجاني: <strong>نشط</strong>"
         },
         "sag.mp4": {
           tr: "➡️ Yön Biçimi: <strong>Ana Çıkış Kapısı</strong><br>📍 Peronlara Olan Mesafe: <strong>45 metre</strong>",
-          en: "➡️ Direction: <strong>Main Exit Gate</strong><br>📍 Distance to Platforms: <strong>45 meters</strong>"
+          en: "➡️ Direction: <strong>Main Exit Gate</strong><br>📍 Distance to Platforms: <strong>45 meters</strong>",
+          ar: "➡️ الاتجاه: <strong>بوابة الخروج الرئيسية</strong><br>📍 المسافة إلى الأرصفة: <strong>45 مترًا</strong>"
         },
         "sol.mp4": {
           tr: "⬅️ Yön Biçimi: <strong>İç Hat Gişeleri</strong><br>📍 Peronlara Olan Mesafe: <strong>20 metre</strong>",
-          en: "⬅️ Direction: <strong>Domestic Ticket Counters</strong><br>📍 Distance to Platforms: <strong>20 meters</strong>"
+          en: "⬅️ Direction: <strong>Domestic Ticket Counters</strong><br>📍 Distance to Platforms: <strong>20 meters</strong>",
+          ar: "⬅️ الاتجاه: <strong>شباك التذاكر المحلي</strong><br>📍 المسافة إلى الأرصفة: <strong>20 مترًا</strong>"
         },
         "yuruyen-merdivenler.mp4": {
           tr: "⚡ Mekanik Durum: <strong>Arızasız / Aktif</strong><br>🏃‍♂️ Akıllı Sensör Modu: <strong>Devrede</strong>",
-          en: "⚡ Mechanical Status: <strong>Operational / Active</strong><br>🏃‍♂️ Smart Sensor Mode: <strong>Enabled</strong>"
+          en: "⚡ Mechanical Status: <strong>Operational / Active</strong><br>🏃‍♂️ Smart Sensor Mode: <strong>Enabled</strong>",
+          ar: "⚡ الحالة الميكانيكية: <strong>تعمل بكفاءة</strong><br>🏃‍♂️ وضع المستشعر الذكي: <strong>مفعل</strong>"
         }
       };
 
@@ -195,20 +257,22 @@
         overlay = document.querySelector('#screen-overlay');
         infoText = document.querySelector('#info-text');
         infoContent = document.querySelector('#info-content');
+        videoTitle = document.querySelector('#video-title');
 
-        /* VİDEO KAPATMA VE TIMEOUT SIFIRLAMA AKSİYONU */
+        /* VİDEO KAPATMA AKSİYONU */
         overlay.addEventListener('click', () => {
           isPlaying = false;
           video.pause();
           video.src = ""; 
           clearInterval(countdownInterval);
           infoText.style.display = 'none';
+          videoTitle.style.display = 'none';
           infoContent.innerHTML = "";
+          videoTitle.innerText = "";
           overlay.style.display = 'none';
         });
       });
 
-      // Saniyeleri Saat Tasarımına (MM:SS) Çeviren Yardımcı Fonksiyon
       function saniyeyiFormatla(toplamSaniye) {
         if (toplamSaniye <= 0) return "00:00";
         let dakika = Math.floor(toplamSaniye / 60);
@@ -216,43 +280,64 @@
         return (dakika < 10 ? "0" : "") + dakika + ":" + (saniye < 10 ? "0" : "") + saniye;
       }
 
-      // METİN İÇERİĞİNİ EKRANA BASAN VE DİLİ GÜNCELLEYEN ANA MOTOR
+      // METİN İÇERİĞİNİ VE ÜST BAŞLIĞI BASAN ANA MOTOR
       function metniYazdir() {
         if (!currentActiveVideoFile) return;
 
+        // 1. Üst Başlık Yönetimi (Türkçede gizlenir, EN ve AR'de yukarıda açılır)
+        if (currentLang === 'tr') {
+          videoTitle.style.display = 'none';
+        } else {
+          videoTitle.innerText = animasyonIsimleri[currentActiveVideoFile][currentLang];
+          videoTitle.style.display = 'block';
+        }
+
+        // 2. Arapça için Metin Hizalama (RTL) Kontrolü
+        if (currentLang === 'ar') {
+          infoText.style.direction = 'rtl';
+          infoText.style.textAlign = 'right';
+        } else {
+          infoText.style.direction = 'ltr';
+          infoText.style.textAlign = 'left';
+        }
+
         let metinIcerigi = "";
 
-        // EĞER OKUTULAN PERONLAR VİDEOSUYSA (CANLI GERİ SAYIM SİMÜLASYONU)
+        // PERONLAR VİDEOSUNA ÖZEL GERİ SAYIM VE ARAPÇA SEÇENEĞİ
         if (currentActiveVideoFile === "peronlar.mp4") {
           if (currentLang === 'tr') {
             metinIcerigi = "🚊 Peron 1: Ankara - İstanbul YHT Yanaşıyor ➡️ Kalan Süre: <strong>" + saniyeyiFormatla(peron1Sure) + "</strong><br>" +
                            "🚊 Peron 2: Konya - Ankara YHT Peronda ➡️ Kalan Süre: <strong>" + saniyeyiFormatla(peron2Sure) + "</strong><br>" +
                            "⚠️ Peron 3: Ankara - Sivas YHT Durumu ➡️ <span class='rotar-alert'>25 Dakika Rötar / Gecikme</span>";
-          } else {
+          } else if (currentLang === 'en') {
             metinIcerigi = "🚊 Platform 1: Ankara - Istanbul YHT Approaching ➡️ Time Left: <strong>" + saniyeyiFormatla(peron1Sure) + "</strong><br>" +
                            "🚊 Platform 2: Konya - Ankara YHT at Platform ➡️ Time Left: <strong>" + saniyeyiFormatla(peron2Sure) + "</strong><br>" +
                            "⚠️ Platform 3: Ankara - Sivas YHT Status ➡️ <span class='rotar-alert'>25 Minutes Delayed</span>";
+          } else if (currentLang === 'ar') {
+            metinIcerigi = "🚊 الرصيف ١: قطار أنقرة - إسطنبول يقترب ➡️ الوقت المتبقي: <strong>" + saniyeyiFormatla(peron1Sure) + "</strong><br>" +
+                           "🚊 الرصيف ٢: قطار قونية - أنقرة على الرصيف ➡️ الوقت المتبقي: <strong>" + saniyeyiFormatla(peron2Sure) + "</strong><br>" +
+                           "⚠️ الرصيف ٣: حالة قطار أنقرة - سيواس ➡️ <span class='rotar-alert'>متأخر ٢٥ دقيقة (تأخير)</span>";
           }
         } else {
-          // STANDART DİĞER VİDEOLARIN ÇİFT DİL METİNLERİ
           metinIcerigi = anlikVeriler[currentActiveVideoFile][currentLang];
         }
 
-        // Tarayıcı otomatik ses engeline takıldıysa altına uyarı ekle
+        // Ses engeli uyarısının eklenmesi
         if (video.muted) {
           if (currentLang === 'tr') {
             metinIcerigi += "<span class='audio-alert'>🔊 Sesi açmak için ekrana bir kez dokunun.</span>";
-          } else {
+          } else if (currentLang === 'en') {
             metinIcerigi += "<span class='audio-alert'>🔊 Tap anywhere on the screen to unmute audio.</span>";
+          } else if (currentLang === 'ar') {
+            metinIcerigi += "<span class='audio-alert'>🔊 انقر في أي مكان على الشاشة لتشغيل الصوت.</span>";
           }
         }
 
         infoContent.innerHTML = metinIcerigi;
       }
 
-      // DİL DEĞİŞTİRME FONKSİYONU (Ekrana dokununca kapanmayı engellemek için event durdurulur)
       function diliDegistir(lang, event) {
-        if (event) event.stopPropagation(); // Üst katmandaki overlay kapatma click'ini bloke eder
+        if (event) event.stopPropagation(); // Kapatma aksiyonunu bloke eder
         currentLang = lang;
         
         document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
@@ -276,7 +361,6 @@
             video.src = "videos/" + videoFile;
             video.load();
             
-            // Kullanıcı önceden etkileşime girdiyse direkt sesli açılır
             video.muted = !hasInteracted;
             
             const playPromise = video.play();
@@ -286,16 +370,15 @@
                 overlay.style.display = 'flex';
                 infoText.style.display = 'block';
                 
-                // İlk metni yazdır
                 metniYazdir();
 
-                // EĞER PERONLAR VİDEOSUYSA GERI SAYIM SAYACINI BAŞLAT
+                // PERONLAR TIMEOUT TETİKLEYİCİSİ
                 clearInterval(countdownInterval);
                 if (videoFile === "peronlar.mp4") {
                   countdownInterval = setInterval(() => {
                     if (peron1Sure > 0) peron1Sure--;
                     if (peron2Sure > 0) peron2Sure--;
-                    metniYazdir(); // Her saniye yazıyı canlı güncelle
+                    metniYazdir();
                   }, 1000);
                 }
               }).catch(err => {
@@ -312,12 +395,15 @@
   <body style="margin: 0px; overflow: hidden;">
 
     <div id="screen-overlay">
+      <div id="video-title"></div>
+
       <video id="main-video" loop playsinline crossorigin="anonymous"></video>
       
       <div id="info-text">
         <div id="lang-switcher">
           <span id="btn-tr" class="lang-btn active" onclick="diliDegistir('tr', event)">🇹🇷 TR</span>
           <span id="btn-en" class="lang-btn" onclick="diliDegistir('en', event)">🇬🇧 EN</span>
+          <span id="btn-ar" class="lang-btn" onclick="diliDegistir('ar', event)">🇸🇦 AR</span>
         </div>
         <div id="info-content"></div>
       </div>
