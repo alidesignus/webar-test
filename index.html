@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>WebAR - 2D HUD Dinamik Veri Sistemi</title>
+    <title>WebAR - Minimalist HUD Sesli Veri Sistemi</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://ar-js-org.github.io/AR.js/aframe/build/aframe-ar.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
       /* 2B EKRAN ORTALAMA VE DIKEY YERLEŞİM TASARIMI */
@@ -17,7 +17,7 @@
         width: 100%;
         height: 100%;
         display: none; /* İlk başta gizli, tabela okununca flex olacak */
-        flex-direction: column; /* Video ve metni dikeyde alt alta dizer */
+        flex-direction: column; 
         justify-content: center; 
         align-items: center;    
         z-index: 9999;
@@ -31,55 +31,78 @@
         aspect-ratio: 1 / 1;   
         object-fit: cover;     
         cursor: pointer;
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); 
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); 
+        border-radius: 8px;
       }
 
-      /* VİDEONUN ALTINDAKİ DİNAMİK VERİ SATIRI */
+      /* MİNİMALİST, MODERN VE DÜZENLİ BİLGİ PANELİ */
       #info-text {
-        margin-top: 20px;
+        margin-top: 24px;
         color: #ffffff;
         font-family: 'Inter', sans-serif;
-        font-size: 1.1rem;
-        font-weight: 500;
-        text-align: center;
-        background: rgba(0, 0, 0, 0.75); /* Okunabilirliği artırmak için koyu arka plan */
-        padding: 12px 24px;
-        border-radius: 30px; /* Modern oval buton tasarımı */
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        font-size: 1rem;
+        line-height: 1.6;
+        font-weight: 400; /* Yazılar normal */
+        text-align: left;  /* İçerik düzenli dursun diye sola yaslı */
+        background: rgba(20, 20, 20, 0.8); /* Minimal koyu arka plan */
+        backdrop-filter: blur(15px); /* Premium cam efekti */
+        -webkit-backdrop-filter: blur(15px);
+        padding: 16px 28px;
+        border-radius: 14px; /* Minimal hafif oval köşeler */
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         max-width: 90%;
-        width: auto;
-        letter-spacing: 0.5px;
-        display: none; /* İlk başta gizli */
+        width: fit-content; /* İçeriğe göre otomatik daralan şık kutu */
+        display: none; 
+      }
+
+      /* Fiyatların bold (kalın) olması için */
+      #info-text strong {
+        font-weight: 700;
+        color: #ffffff;
+      }
+
+      /* Tarayıcı ses engeli uyarısı */
+      .audio-alert {
+        display: block;
+        margin-top: 6px;
+        font-size: 0.85rem;
+        color: #ffcc00;
+        font-weight: 400;
       }
     </style>
 
     <script>
       let video, overlay, infoText;
       let isPlaying = false;
+      let hasInteracted = false;
+
+      // Kullanıcının ekrana dokunup dokunmadığını takip eder (Ses kilidini açmak için)
+      window.addEventListener('click', () => { hasInteracted = true; });
+      window.addEventListener('touchstart', () => { hasInteracted = true; });
 
       // ==========================================
-      // HER VİDEO İÇİN ANLIK VERİ HAVUZU
+      // İSTEDİĞİN FORMATTA İKİ SATIRLI VE BOLD VERİ HAVUZU
       // ==========================================
       const anlikVeriler = {
-        "taksi.mp4": "🚕 Güncel Taksi KM Ücreti: 25,00 TL / Açılış: 40,00 TL",
-        "giseler.mp4": "⏱️ Anlık Gişe Yoğunluğu: Normal (Ortalama Bekleme: 4 dk)",
-        "atm.mp4": "🏧 ATM Durumu: Aktif | Tüm Ortak Kartlara Komisyonsuz",
-        "metro.mp4": "🚇 Bir Sonraki Metro Seferi: 3 Dakika Sonra (Peron 1)",
-        "otobus.mp4": "🚌 Şehirlerarası Otobüs Seferleri Gecikmesiz Devam Etmektedir",
-        "bekleme-salonu.mp4": "🌡️ Salon Sıcaklığı: 22°C | Doluluk Oranı: %45",
-        "bebek-bakim-odasi.mp4": "🍼 Bebek Bakım Odası: Açık / Sterilize Edildi",
-        "market.mp4": "🛒 Market Çalışma Saatleri: 07:00 - 23:00",
-        "mescit.mp4": "🕌 Mescit Bölümü Kullanıma Açık ve Temiz",
-        "peronlar.mp4": "ℹ️ Peronlar Bölgesi Canlı Sefer Takibi İçin Panolara Bakınız",
-        "restaurant.mp4": "🍽️ Yemek Alanı: Günün Menüsü Aktif",
-        "asansorler.mp4": "🛗 Asansör Durumu: Aktif | Maksimum Kapasite: 10 Kişi",
-        "kayip-esya-burosu.mp4": "💼 Kayıp Eşya Bürosu Hizmet Saatleri: 09:00 - 18:00",
-        "yuruyen-merdivenler.mp4": "⚡ Yürüyen Merdivenler: Aktif / Arıza Yok",
-        "ust-kat.mp4": "🔼 Üst Kat: Fast Food ve Çocuk Oyun Alanı",
-        "alt-kat.mp4": "🔽 Alt Kat: Otopark, Lavabolar ve Emanet Ofisi",
-        "sag.mp4": "➡️ Yönlendirme: Çıkış ve Taksi Durakları Yönü",
-        "sol.mp4": "⬅️ Yönlendirme: Şehir İçi Otobüs Peronları Yönü"
+        "taksi.mp4": "🚕 Taksi KM Ücreti: <strong>45,00 TL</strong><br>💵 Açılış Ücreti: <strong>65,00 TL</strong>",
+        "giseler.mp4": "⏱️ Anlık Gişe Yoğunluğu: <strong>Normal</strong><br>⏳ Ortalama Bekleme: <strong>4 dk</strong>",
+        "atm.mp4": "🏧 ATM Durumu: <strong>Aktif</strong><br>💳 Tüm Kartlar: <strong>Komisyonsuz</strong>",
+        "metro.mp4": "🚇 Metro Sefer Sıklığı: <strong>5 dk</strong><br>🚨 Son Sefer Saati: <strong>00:00</strong>",
+        "otobus.mp4": "🚌 Peron Durumu: <strong>Araç Hazır</strong><br>⏱️ Kalkış Saatine: <strong>12 dk</strong>",
+        "bekleme-salonu.mp4": "🌡️ Salon Sıcaklığı: <strong>22°C</strong><br>👥 Güncel Doluluk: <strong>%45</strong>",
+        "bebek-bakim-odasi.mp4": "🍼 Bebek Odası: <strong>Müsait</strong><br>✨ Hijyen Kontrolü: <strong>Yapıldı</strong>",
+        "market.mp4": "🛒 Market Durumu: <strong>Açık</strong><br>🕒 Kapanış Saati: <strong>23:00</strong>",
+        "mescit.mp4": "🕌 Mescit Durumu: <strong>Açık</strong><br>🧹 Son Temizlik: <strong>1 saat önce</strong>",
+        "peronlar.mp4": "ℹ️ Aktif Peron Sayısı: <strong>12 Peron</strong><br>📢 Güncel Rötar: <strong>Yok</strong>",
+        "restaurant.mp4": "🍽️ Yemek Alanı: <strong>Açık</strong><br>🍔 Menü Çeşitliliği: <strong>Zengin</strong>",
+        "asansorler.mp4": "🛗 Asansör Grubu: <strong>Aktif</strong><br>🔧 Periyodik Bakım: <strong>Tamamlandı</strong>",
+        "kayip-esya-burosu.mp4": "💼 Büro Durumu: <strong>Açık</strong><br>🕒 Mesai Bitişi: <strong>18:00</strong>",
+        "yuruyen-merdivenler.mp4": "⚡ Teknik Durum: <strong>Arızasız</strong><br>🏃‍♂️ Enerji Tasarrufu: <strong>Aktif</strong>",
+        "ust-kat.mp4": "🔼 Bölge İçeriği: <strong>Yemek Alanı</strong><br>👶 Çocuk Parkı: <strong>Mevcut</strong>",
+        "alt-kat.mp4": "🔽 Bölge İçeriği: <strong>Otopark</strong><br>🧼 Oto Yıkama: <strong>Aktif</strong>",
+        "sag.mp4": "➡️ Yön Biçimi: <strong>Çıkış Kapısı</strong><br>📍 Mesafe: <strong>45 metre</strong>",
+        "sol.mp4": "⬅️ Yön Biçimi: <strong>İç Hatlar</strong><br>📍 Mesafe: <strong>20 metre</strong>"
       };
 
       window.addEventListener('DOMContentLoaded', () => {
@@ -87,13 +110,13 @@
         overlay = document.querySelector('#screen-overlay');
         infoText = document.querySelector('#info-text');
 
-        /* KAPATMA AKSİYONU: EKRANA TIKLANDIĞINDA HER ŞEYİ SIFIRLAR */
+        /* VİDEO KAPATMA AKSİYONU */
         overlay.addEventListener('click', () => {
           isPlaying = false;
           video.pause();
           video.src = ""; 
           infoText.style.display = 'none';
-          infoText.innerText = "";
+          infoText.innerHTML = "";
           overlay.style.display = 'none';
         });
       });
@@ -109,23 +132,28 @@
 
             isPlaying = true;
             
-            // Videoyu yükle
             video.src = "videos/" + videoFile;
             video.load();
+            
+            // Eğer kullanıcı daha önce ekrana dokunduysa direkt sesli başlat
+            video.muted = !hasInteracted;
             
             const playPromise = video.play();
             
             if (playPromise !== undefined) {
               playPromise.then(() => {
-                // 1. Ekran panelini flex olarak aç
                 overlay.style.display = 'flex';
                 
-                // 2. Havuzdan ilgili videonun metnini çek ve yazdır
                 if (anlikVeriler[videoFile]) {
-                  infoText.innerText = anlikVeriler[videoFile];
-                  infoText.style.display = 'block'; // Yazıyı görünür yap
-                } else {
-                  infoText.style.display = 'none';
+                  let metinIcerigi = anlikVeriler[videoFile];
+                  
+                  // Eğer tarayıcı engeli yüzünden video sessiz başladıysa alta uyarı ekle
+                  if (video.muted) {
+                    metinIcerigi += "<span class='audio-alert'>🔊 Sesi açmak için ekrana bir kez dokunun.</span>";
+                  }
+                  
+                  infoText.innerHTML = metinIcerigi;
+                  infoText.style.display = 'block';
                 }
               }).catch(err => {
                 console.log("Oynatma engeli:", err);
@@ -141,8 +169,9 @@
   <body style="margin: 0px; overflow: hidden;">
 
     <div id="screen-overlay">
-      <video id="main-video" loop muted playsinline crossorigin="anonymous"></video>
-      <div id="info-text"></div> </div>
+      <video id="main-video" loop playsinline crossorigin="anonymous"></video>
+      <div id="info-text"></div> 
+    </div>
     
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720;">
       
