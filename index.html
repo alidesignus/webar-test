@@ -2,12 +2,12 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>WebAR - 2D HUD Sistemi</title>
+    <title>WebAR - 2D HUD Kare Video Sistemi</title>
     <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
     <script src="https://ar-js-org.github.io/AR.js/aframe/build/aframe-ar.js"></script>
 
     <style>
-      /* 2B EKRAN ORTALAMA VE MAKSİMUM 1080PX TASARIMI */
+      /* 2B EKRAN ORTALAMA VE TAM KARE (1:1) SINIRLAMA TASARIMI */
       #screen-overlay {
         position: fixed;
         top: 0;
@@ -15,75 +15,44 @@
         width: 100%;
         height: 100%;
         display: none; /* İlk başta gizli, tabela okununca flex olacak */
-        justify-content: center;
-        align-items: center;
+        justify-content: center; /* Yatayda tam ortalama */
+        align-items: center;    /* Dikeyde tam ortalama */
         z-index: 9999;
-        background: rgba(0, 0, 0, 0.2); /* Arkadaki kamera görüntüsünü hafif karartır */
+        background: rgba(0, 0, 0, 0.4); /* Arkadaki kamera görüntüsünü hafifçe karartır */
         pointer-events: auto;
       }
 
-      #chroma-canvas {
-        width: 90%;          /* Mobil ekranlarda şık durması için kenar payı */
-        max-width: 1080px;   /* İstenen maksimum genişlik sınırı */
-        height: auto;
+      #main-video {
+        width: 90%;             /* Mobil ekranlarda sağdan soldan şık bir pay bırakır */
+        max-width: 1080px;      /* En fazla 1080px genişliğe çıkabilir */
+        aspect-ratio: 1 / 1;    /* 1080x1080 formatını tüm cihazlarda zorunlu kılar */
+        object-fit: cover;      /* Videonun kare alana kusursuz oturmasını sağlar */
         cursor: pointer;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); /* Videonun etrafına derinlik katan gölge */
       }
     </style>
 
     <script>
-      let video, canvas, ctx, animationLoop;
+      let video, overlay;
       let isPlaying = false;
 
       window.addEventListener('DOMContentLoaded', () => {
         video = document.querySelector('#main-video');
-        canvas = document.querySelector('#chroma-canvas');
-        ctx = canvas.getContext('2d');
+        overlay = document.querySelector('#screen-overlay');
 
-        // Sabit yüksek kaliteli kare buffer (Çökmeyi önleyen en kritik ayar)
-        canvas.width = 1080;
-        canvas.height = 1080;
-
-        // VİDEOYA VEYA EKRANA TIKLANDIĞINDA ANIMASYONU KAPATMA SİSTEMİ
-        const overlay = document.querySelector('#screen-overlay');
+        /* VİDEOYA VEYA EKRANDAKİ KARARTIYA TIKLANDIĞINDA VİDEOYU KAPATMA SİSTEMİ */
         overlay.addEventListener('click', () => {
           isPlaying = false;
           video.pause();
-          video.src = ""; // Videoyu hafızadan boşalt
-          cancelAnimationFrame(animationLoop);
-          ctx.clearRect(0, 0, canvas.width, canvas.height); // Tuvali temizle
+          video.src = ""; // Videoyu RAM hafızasından tamamen temizler
           overlay.style.display = 'none';
         });
       });
 
-      // CANLI SAF YEŞİL (#00FF00) TEMİZLEME MOTORU
-      function renderChromaKey() {
-        if (!isPlaying || video.paused || video.ended) return;
-
-        // Kare videoyu tuvale çiz
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        
-        const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = frame.data;
-
-        for (let i = 0; i < data.length; i += 4) {
-          let r = data[i];
-          let g = data[i + 1];
-          let b = data[i + 2];
-
-          // #00ff00 dijital yeşili havada imha eden formül
-          if (g > 110 && g > r * 1.35 && g > b * 1.35) {
-            data[i + 3] = 0; // Yeşili tamamen şeffaf yap
-          }
-        }
-        ctx.putImageData(frame, 0, 0);
-        animationLoop = requestAnimationFrame(renderChromaKey);
-      }
-
-      // AKILLI RADAR TAKİP MOTORU
+      /* AKILLI RADAR TAKİP MOTORU */
       AFRAME.registerComponent('marker-handler', {
         init: function () {
           const marker = this.el;
-          // Tabela üzerindeki video dosya adını çeker
           const videoFile = marker.getAttribute('data-video'); 
 
           marker.addEventListener('markerFound', function () {
@@ -91,19 +60,18 @@
 
             isPlaying = true;
             
-            // Olmayan videoların sistemi kilitlememesi için dinamik yükleme yapıyoruz
+            // Videoyu dinamik olarak çağırır
             video.src = "videos/" + videoFile;
             video.load();
             
-            // Mobil cihazlarda güvenli otomatik oynatmayı başlat
             const playPromise = video.play();
             
             if (playPromise !== undefined) {
               playPromise.then(() => {
-                document.querySelector('#screen-overlay').style.display = 'flex';
-                renderChromaKey();
+                // Video oynamaya başladığı an ekran ortasındaki kare paneli açar
+                overlay.style.display = 'flex';
               }).catch(err => {
-                console.log("Oynatma tarayıcı engeline takıldı:", err);
+                console.log("Oynatma engeli:", err);
                 isPlaying = false;
               });
             }
@@ -116,10 +84,8 @@
   <body style="margin: 0px; overflow: hidden;">
 
     <div id="screen-overlay">
-      <canvas id="chroma-canvas"></canvas>
+      <video id="main-video" loop muted playsinline crossorigin="anonymous"></video>
     </div>
-
-    <video id="main-video" loop muted playsinline crossorigin="anonymous" style="display: none;"></video>
     
     <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720;">
       
